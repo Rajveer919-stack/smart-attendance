@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -24,7 +24,7 @@ export default function TeacherDashboard() {
     setStartingId(subject._id);
     try {
       const { data } = await api.post('/sessions/start', { subjectId: subject._id });
-      navigate(`/teacher/session/${data.session.id}`, {
+      navigate('/teacher/session/' + data.session.id, {
         state: { subjectName: subject.name },
       });
     } catch (err) {
@@ -69,7 +69,7 @@ export default function TeacherDashboard() {
               <div>
                 <h3 className="font-semibold text-slate-800">{s.name}</h3>
                 <p className="text-sm text-slate-500">
-                  {s.code} · {s.department} · Semester {s.semester}
+                  {s.code + ' - ' + s.department + ' - Semester ' + s.semester}
                 </p>
               </div>
               <button
@@ -79,6 +79,12 @@ export default function TeacherDashboard() {
               >
                 {startingId === s._id ? 'Shuru ho rahi hai...' : 'Class shuru karo (QR)'}
               </button>
+              <Link
+                to={'/teacher/report/' + s._id}
+                className="block text-center w-full rounded-lg border border-indigo-600 text-indigo-600 font-medium py-2 hover:bg-indigo-50"
+              >
+                Poori class ki list aur report
+              </Link>
             </div>
           ))}
         </div>

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Subject = require('../models/Subject');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -16,14 +17,45 @@ const userResponse = (user) => ({
   semester: user.semester,
 });
 
+// GET /api/auth/classes   (public)
+// Un classes ki list jinke subject bane hue hai. Register page ka dropdown isi se banta hai
+exports.getClasses = async (req, res) => {
+  try {
+    const groups = await Subject.aggregate([
+      { $group: { _id: { department: '$department', semester: '$semester' } } },
+      { $sort: { '_id.department': 1, '_id.semester': 1 } },
+    ]);
+    const classes = groups.map((g) => ({
+      department: g._id.department,
+      semester: g._id.semester,
+    }));
+    res.json({ classes });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // POST /api/auth/register
 // Public register sirf student ke liye. Teacher/admin admin hi banayega.
 exports.register = async (req, res) => {
   try {
     const { name, email, password, rollNo, department, semester } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'name, email aur password zaroori hai' });
+    if (!name || !email || !password || !rollNo || !department || !semester) {
+      return res
+        .status(400)
+        .json({ message: 'name, email, password, roll number aur class sab zaroori hai' });
+    }
+
+    // Student us class me hi register ho sakta hai jiske subject bane hue hai
+    const classExists = await Subject.exists({
+      department,
+      semester: Number(semester),
+    });
+    if (!classExists) {
+      return res.status(400).json({
+        message: 'Is class ke abhi koi subject nahi bane hai. Admin se subject banwao',
+      });
     }
 
     const exists = await User.findOne({ email });
@@ -38,7 +70,7 @@ exports.register = async (req, res) => {
       role: 'student',
       rollNo,
       department,
-      semester,
+      semester: Number(semester),
     });
 
     res.status(201).json({ token: signToken(user._id), user: userResponse(user) });

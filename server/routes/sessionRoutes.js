@@ -4,6 +4,7 @@ const {
   getQr,
   endSession,
   getMySessions,
+  getSessionAttendance,
 } = require('../controllers/sessionController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -14,6 +15,7 @@ router.use(protect, authorize('teacher'));
 router.get('/', getMySessions);
 router.post('/start', startSession);
 router.get('/:id/qr', getQr);
+router.get('/:id/attendance', getSessionAttendance);
 router.post('/:id/end', endSession);
 
 module.exports = router;

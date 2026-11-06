@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
 const Session = require('../models/Session');
 const Subject = require('../models/Subject');
+const Attendance = require('../models/Attendance');
+const User = require('../models/User');
 
 // QR kitni der valid rahega (seconds)
 const QR_VALIDITY_SECONDS = 30;
@@ -11,7 +13,7 @@ const QR_VALIDITY_SECONDS = 30;
 const generateQrToken = (sessionId, qrSecret) =>
   jwt.sign({ sid: String(sessionId) }, qrSecret, { expiresIn: QR_VALIDITY_SECONDS });
 
-// Week 4 me attendance mark karte time ye use hoga
+// Attendance mark karte time ye use hota hai
 const verifyQrToken = (token, qrSecret) => jwt.verify(token, qrSecret);
 
 // POST /api/sessions/start   body: { subjectId }
@@ -114,6 +116,54 @@ exports.getMySessions = async (req, res) => {
     res.json({ count: sessions.length, sessions });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/sessions/:id/attendance
+// Is class me kaun present hai aur kaun absent (naam aur roll number ke saath)
+exports.getSessionAttendance = async (req, res) => {
+  try {
+    const session = await Session.findById(req.params.id);
+    if (!session) return res.status(404).json({ message: 'Session nahi mila' });
+
+    if (String(session.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'Ye session tumhara nahi hai' });
+    }
+
+    const subject = await Subject.findById(session.subject);
+    const students = await User.find({
+      role: 'student',
+      department: subject.department,
+      semester: subject.semester,
+    }).sort({ rollNo: 1, name: 1 });
+
+    const records = await Attendance.find({ session: session._id });
+    const markedAt = {};
+    records.forEach((r) => {
+      markedAt[String(r.student)] = r.markedAt;
+    });
+
+    const list = students.map((s) => ({
+      studentId: s._id,
+      name: s.name,
+      rollNo: s.rollNo,
+      status: markedAt[String(s._id)] ? 'present' : 'absent',
+      markedAt: markedAt[String(s._id)] || null,
+    }));
+
+    const presentCount = list.filter((s) => s.status === 'present').length;
+
+    res.json({
+      sessionId: session._id,
+      isActive: session.isActive,
+      subject: subject.name,
+      total: list.length,
+      presentCount,
+      absentCount: list.length - presentCount,
+      students: list,
+    });
+  } catch (err) {
+    res.status(400).json({ message: 'Session ID sahi nahi hai' });
   }
 };
 

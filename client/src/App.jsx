@@ -2,37 +2,21 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import SessionQR from './pages/SessionQR';
+import SubjectReport from './pages/SubjectReport';
 import StudentDashboard from './pages/StudentDashboard';
 import ScanQR from './pages/ScanQR';
 
 // Login hona zaroori hai, aur role bhi sahi hona chahiye
-function ProtectedRoute({ role, children }) {
+function ProtectedRoute({ role, loginPath = '/login', children }) {
   const { user, loading } = useAuth();
   if (loading) return <p className="p-6">Loading...</p>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (role && user.role !== role) return <Navigate to={`/${user.role}`} replace />;
+  if (!user) return <Navigate to={loginPath} replace />;
+  if (role && user.role !== role) return <Navigate to={'/' + user.role} replace />;
   return children;
-}
-
-// Admin ke liye abhi ke liye chhota sa page. Aage isko asli dashboard se badal denge
-function Home({ title }) {
-  const { user, logout } = useAuth();
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
-      <p className="text-slate-600 mt-1">
-        Welcome, {user.name} ({user.role})
-      </p>
-      <button
-        onClick={logout}
-        className="mt-4 rounded-lg bg-slate-800 text-white px-4 py-2 hover:bg-slate-900"
-      >
-        Logout
-      </button>
-    </div>
-  );
 }
 
 export default function App() {
@@ -40,6 +24,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
 
       <Route
         path="/student"
@@ -74,12 +59,20 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/teacher/report/:id"
+        element={
+          <ProtectedRoute role="teacher">
+            <SubjectReport />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/admin"
         element={
-          <ProtectedRoute role="admin">
-            <Home title="Admin Dashboard" />
+          <ProtectedRoute role="admin" loginPath="/admin/login">
+            <AdminDashboard />
           </ProtectedRoute>
         }
       />
