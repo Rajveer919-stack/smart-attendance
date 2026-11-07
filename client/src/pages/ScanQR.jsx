@@ -124,9 +124,14 @@ export default function ScanQR() {
 
     try {
       await scanner.start(
-        { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        { facingMode: 'environment' },
         {
           fps: 10,
+          videoConstraints: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           qrbox: (w, h) => {
             const side = Math.floor(Math.min(w, h) * 0.75);
             return { width: side, height: side };
@@ -141,11 +146,14 @@ export default function ScanQR() {
         () => {}
       );
       setupZoom(scanner);
-    } catch {
+    } catch (err) {
       scannerRef.current = null;
       setStatus('error');
+      const reason = String((err && (err.name || err.message)) || err);
       setMessage(
-        'Camera chalu nahi hua. Camera ki permission do, aur site HTTPS ya localhost par kholo.'
+        'Camera chalu nahi hua. Camera ki permission do, aur site HTTPS ya localhost par kholo. (' +
+          reason +
+          ')'
       );
     }
   };
@@ -234,7 +242,7 @@ export default function ScanQR() {
         {(status === 'idle' || status === 'error' || status === 'success') && (
           <button
             onClick={startScan}
-                        className="w-full rounded-xl bg-indigo-600 text-white font-semibold py-2.5 hover:bg-indigo-700"
+            className="w-full rounded-xl bg-indigo-600 text-white font-semibold py-2.5 hover:bg-indigo-700"
           >
             {status === 'idle' ? 'Scan shuru karo' : 'Dobara scan karo'}
           </button>
