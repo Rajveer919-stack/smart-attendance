@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import LanguageGate from './components/LanguageGate';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -23,72 +24,74 @@ function ProtectedRoute({ role, loginPath = '/login', children }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/admin/login" element={<AdminLogin />} />
+    <LanguageGate>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
 
-      <Route
-        path="/student"
-        element={
-          <ProtectedRoute role="student">
-            <StudentDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/student/scan"
-        element={
-          <ProtectedRoute role="student">
-            <ScanQR />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/student"
+          element={
+            <ProtectedRoute role="student">
+              <StudentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/scan"
+          element={
+            <ProtectedRoute role="student">
+              <ScanQR />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/teacher"
-        element={
-          <ProtectedRoute role="teacher">
-            <TeacherDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/teacher/session/:id"
-        element={
-          <ProtectedRoute role="teacher">
-            <SessionQR />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/teacher/students"
-        element={
-          <ProtectedRoute role="teacher">
-            <TeacherStudents />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/teacher/report/:id"
-        element={
-          <ProtectedRoute role="teacher">
-            <SubjectReport />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/teacher"
+          element={
+            <ProtectedRoute role="teacher">
+              <TeacherDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/session/:id"
+          element={
+            <ProtectedRoute role="teacher">
+              <SessionQR />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/students"
+          element={
+            <ProtectedRoute role="teacher">
+              <TeacherStudents />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/report/:id"
+          element={
+            <ProtectedRoute role="teacher">
+              <SubjectReport />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute role="admin" loginPath="/admin/login">
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute role="admin" loginPath="/admin/login">
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </LanguageGate>
   );
 }
