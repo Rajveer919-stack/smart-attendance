@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import AppHeader from '../components/AppHeader';
 
 const inputClass =
   'w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500';
@@ -10,10 +11,12 @@ const primaryBtn =
 
 const emptyTeacher = { name: '', email: '', password: '', department: '' };
 const emptySubject = { name: '', code: '', department: '', semester: '6', teacher: '' };
+const emptyAccount = { currentPassword: '', newEmail: '', newPassword: '' };
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
-  const [tab, setTab] = useState('teachers');
+  const { user } = useAuth();
+  const [tab, setTab] = useState('students');
+  const [meta, setMeta] = useState({ departments: [], semesters: [1, 2, 3, 4, 5, 6, 7, 8], maxRoll: 300 });
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -22,18 +25,24 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
   const [teacherForm, setTeacherForm] = useState(emptyTeacher);
   const [subjectForm, setSubjectForm] = useState(emptySubject);
+  const [accountForm, setAccountForm] = useState(emptyAccount);
+  const [editing, setEditing] = useState(null);
   const [query, setQuery] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [semFilter, setSemFilter] = useState('');
 
   const loadAll = useCallback(async () => {
     try {
-      const [t, s, sub] = await Promise.all([
-        api.get('/users?role=teacher'),
-        api.get('/users?role=student'),
+      const [t, s, sub, m] = await Promise.all([
+        api.get('/users?role=teacher&limit=1000'),
+        api.get('/users?role=student&limit=1000'),
         api.get('/subjects'),
+        api.get('/auth/classes'),
       ]);
       setTeachers(t.data.users);
       setStudents(s.data.users);
       setSubjects(sub.data.subjects);
+      setMeta(m.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Data load nahi hua');
     }
@@ -98,15 +107,86 @@ export default function AdminDashboard() {
     run(() => api.delete('/subjects/' + s._id), 'Subject delete ho gaya');
   };
 
-  const departments = Array.from(new Set(subjects.map((s) => s.department)));
-  const q = query.trim().toLowerCase();
-  const shownStudents = students.filter(
-    (s) =>
-      !q ||
-      s.name.toLowerCase().includes(q) ||
-      (s.rollNo || '').toLowerCase().includes(q) ||
-      (s.department || '').toLowerCase().includes(q)
-  );
+  const startEdit = (u) => {
+    setError('');
+    setNotice('');
+    setEditing({
+      _id: u._id,
+      role: u.role,
+      name: u.name || '',
+      email: u.email || '',
+      rollNo: u.rollNo === undefined || u.rollNo === null ? '' : String(u.rollNo),
+      department: u.department || '',
+      semester: u.semester ? String(u.semester) : '',
+      newPassword: '',
+    });
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    const body = { name: editing.name, email: editing.email };
+    if (editing.role === 'student') {
+      body.rollNo = editing.rollNo;
+      body.department = editing.department;
+      body.semester = editing.semester;
+    }
+    if (editing.newPassword) body.newPassword = editing.newPassword;
+    const ok = await run(() => api.put('/users/' + editing._id, body), 'Update ho gaya');
+    if (ok) setEditing(null);
+  };
+
+  const saveAccount = async (e) => {
+    e.preventDefault();
+    const body = { currentPassword: accountForm.currentPassword };
+    if (accountForm.newEmail) body.newEmail = accountForm.newEmail;
+    if (accountForm.newPassword) body.newPassword = accountForm.newPassword;
+    const ok = await run(
+      () => api.put('/auth/account', body),
+      'Account update ho gaya. Agli baar naye email/password se login karna'
+    );
+    if (ok) setAccountForm(emptyAccount);
+  };
+
+  // Students ko department -> semester ke group me baantna, har group roll number ke order me
+  const groups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = students.filter((s) => {
+      if (deptFilter && s.department !== deptFilter) return false;
+      if (semFilter && String(s.semester) !== semFilter) return false;
+      if (!q) return true;
+      return (
+        s.name.toLowerCase().includes(q) ||
+        s.email.toLowerCase().includes(q) ||
+        String(s.rollNo || '') === q
+      );
+    });
+    const map = new Map();
+    filtered.forEach((s) => {
+      const key = (s.department || '-') + '|' + (s.semester || 0);
+      if (!map.has(key)) map.set(key, { department: s.department || '-', semester: s.semester || 0, rows: [] });
+      map.get(key).rows.push(s);
+    });
+    const order = (d) => {
+      const i = meta.departments.indexOf(d);
+      return i === -1 ? 999 : i;
+    };
+    const list = Array.from(map.values());
+    list.forEach((g) => g.rows.sort((a, b) => (a.rollNo || 0) - (b.rollNo || 0)));
+    list.sort((a, b) => order(a.department) - order(b.department) || a.semester - b.semester);
+    return list;
+  }, [students, query, deptFilter, semFilter, meta.departments]);
+
+  const classCounts = useMemo(() => {
+    const map = new Map();
+    students.forEach((s) => {
+      const key = (s.department || '-') + '|' + (s.semester || 0);
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return Array.from(map.entries()).map(([key, count]) => {
+      const parts = key.split('|');
+      return { department: parts[0], semester: Number(parts[1]), count };
+    });
+  }, [students]);
 
   const tabClass = (name) =>
     'px-4 py-2 rounded-lg text-sm font-medium ' +
@@ -114,22 +194,15 @@ export default function AdminDashboard() {
       ? 'bg-indigo-600 text-white'
       : 'bg-white text-slate-700 hover:bg-slate-50 shadow');
 
+  const deptOptions = meta.departments.map((d) => (
+    <option key={d} value={d}>
+      {d}
+    </option>
+  ));
+
   return (
     <div className="min-h-screen bg-slate-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-slate-800">Admin Panel</h1>
-            <p className="text-sm text-slate-500">{user.name}</p>
-          </div>
-          <button
-            onClick={logout}
-            className="rounded-lg bg-slate-800 text-white text-sm px-3 py-1.5 hover:bg-slate-900"
-          >
-            Logout
-          </button>
-        </div>
-      </header>
+     <AppHeader label="Admin Panel" />
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <div className="grid grid-cols-3 gap-3 text-center">
@@ -147,15 +220,18 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => switchTab('students')} className={tabClass('students')}>
+            Students
+          </button>
           <button onClick={() => switchTab('teachers')} className={tabClass('teachers')}>
             Teachers
           </button>
           <button onClick={() => switchTab('subjects')} className={tabClass('subjects')}>
             Subjects
           </button>
-          <button onClick={() => switchTab('students')} className={tabClass('students')}>
-            Students
+          <button onClick={() => switchTab('account')} className={tabClass('account')}>
+            Account
           </button>
         </div>
 
@@ -164,6 +240,128 @@ export default function AdminDashboard() {
         )}
         {notice && (
           <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{notice}</p>
+        )}
+
+        {tab === 'students' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl shadow p-5 space-y-3">
+              <h2 className="text-lg font-semibold text-slate-800">Class-wise students</h2>
+              {classCounts.length === 0 && (
+                <p className="text-slate-500 text-sm">Abhi kisi class me student nahi hai.</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {classCounts
+                  .sort(
+                    (a, b) =>
+                      meta.departments.indexOf(a.department) - meta.departments.indexOf(b.department) ||
+                      a.semester - b.semester
+                  )
+                  .map((c) => (
+                    <button
+                      key={c.department + c.semester}
+                      onClick={() => {
+                        setDeptFilter(c.department);
+                        setSemFilter(String(c.semester));
+                      }}
+                      className="rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm px-3 py-1 hover:bg-indigo-100"
+                    >
+                      {c.department + ' Sem ' + c.semester + ': ' + c.count}
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-5 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-4">
+                <select
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Saare departments</option>
+                  {deptOptions}
+                </select>
+                <select
+                  value={semFilter}
+                  onChange={(e) => setSemFilter(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Saare semesters</option>
+                  {meta.semesters.map((n) => (
+                    <option key={n} value={String(n)}>
+                      {'Semester ' + n}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  placeholder="Naam, roll ya email"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className={inputClass}
+                />
+                <button
+                  onClick={() => {
+                    setDeptFilter('');
+                    setSemFilter('');
+                    setQuery('');
+                  }}
+                  className="rounded-lg border border-slate-300 text-slate-700 px-3 py-2 hover:bg-slate-50"
+                >
+                  Filter hatao
+                </button>
+              </div>
+            </div>
+
+            {groups.length === 0 && (
+              <p className="text-slate-500 bg-white rounded-2xl shadow p-5">Koi student nahi mila.</p>
+            )}
+
+            {groups.map((g) => (
+              <div key={g.department + g.semester} className="bg-white rounded-2xl shadow p-5 space-y-2">
+                <h3 className="font-semibold text-slate-800">
+                  {g.department + ' - Semester ' + g.semester}
+                  <span className="ml-2 text-sm font-normal text-slate-500">
+                    {g.rows.length + ' students'}
+                  </span>
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-slate-500 border-b border-slate-200">
+                        <th className="py-2 pr-3 w-16">Roll</th>
+                        <th className="py-2 pr-3">Naam</th>
+                        <th className="py-2 pr-3">Email</th>
+                        <th className="py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {g.rows.map((s) => (
+                        <tr key={s._id} className="border-b border-slate-100">
+                          <td className="py-2 pr-3 font-medium text-slate-700">{s.rollNo || '-'}</td>
+                          <td className="py-2 pr-3 font-medium text-slate-800">{s.name}</td>
+                          <td className="py-2 pr-3 text-slate-600">{s.email}</td>
+                          <td className="py-2 text-right whitespace-nowrap">
+                            <button
+                              onClick={() => startEdit(s)}
+                              className="text-indigo-600 hover:underline mr-3"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => removeUser(s, 'Student')}
+                              className="text-red-600 hover:underline"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
 
         {tab === 'teachers' && (
@@ -201,13 +399,14 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <label className={labelClass}>Department (optional)</label>
-                <input
+                <select
                   value={teacherForm.department}
-                  onChange={(e) =>
-                    setTeacherForm({ ...teacherForm, department: e.target.value })
-                  }
+                  onChange={(e) => setTeacherForm({ ...teacherForm, department: e.target.value })}
                   className={inputClass}
-                />
+                >
+                  <option value="">Koi nahi</option>
+                  {deptOptions}
+                </select>
               </div>
               <button type="submit" disabled={busy} className={primaryBtn}>
                 Teacher banao
@@ -224,12 +423,14 @@ export default function AdminDashboard() {
                       <p className="font-medium text-slate-800">{t.name}</p>
                       <p className="text-xs text-slate-500">{t.email}</p>
                     </div>
-                    <button
-                      onClick={() => removeUser(t, 'Teacher')}
-                      className="text-sm text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
+                    <div className="whitespace-nowrap text-sm">
+                      <button onClick={() => startEdit(t)} className="text-indigo-600 hover:underline mr-3">
+                        Edit
+                      </button>
+                      <button onClick={() => removeUser(t, 'Teacher')} className="text-red-600 hover:underline">
+                        Delete
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -262,31 +463,24 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>Department</label>
-                  <input
+                  <select
                     required
-                    list="department-list"
                     value={subjectForm.department}
-                    onChange={(e) =>
-                      setSubjectForm({ ...subjectForm, department: e.target.value })
-                    }
+                    onChange={(e) => setSubjectForm({ ...subjectForm, department: e.target.value })}
                     className={inputClass}
-                  />
-                  <datalist id="department-list">
-                    {departments.map((d) => (
-                      <option key={d} value={d} />
-                    ))}
-                  </datalist>
+                  >
+                    <option value="">Chuno</option>
+                    {deptOptions}
+                  </select>
                 </div>
                 <div>
                   <label className={labelClass}>Semester</label>
                   <select
                     value={subjectForm.semester}
-                    onChange={(e) =>
-                      setSubjectForm({ ...subjectForm, semester: e.target.value })
-                    }
+                    onChange={(e) => setSubjectForm({ ...subjectForm, semester: e.target.value })}
                     className={inputClass}
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                    {meta.semesters.map((n) => (
                       <option key={n} value={n}>
                         {n}
                       </option>
@@ -310,9 +504,7 @@ export default function AdminDashboard() {
                   ))}
                 </select>
                 {teachers.length === 0 && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Pehle Teachers tab me teacher banao.
-                  </p>
+                  <p className="text-xs text-red-600 mt-1">Pehle Teachers tab me teacher banao.</p>
                 )}
               </div>
               <button type="submit" disabled={busy} className={primaryBtn}>
@@ -335,10 +527,7 @@ export default function AdminDashboard() {
                         {'Teacher: ' + (s.teacher ? s.teacher.name : '-')}
                       </p>
                     </div>
-                    <button
-                      onClick={() => removeSubject(s)}
-                      className="text-sm text-red-600 hover:underline"
-                    >
+                    <button onClick={() => removeSubject(s)} className="text-sm text-red-600 hover:underline">
                       Delete
                     </button>
                   </li>
@@ -348,54 +537,147 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {tab === 'students' && (
-          <div className="bg-white rounded-2xl shadow p-5 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-slate-800">Saare students</h2>
+        {tab === 'account' && (
+          <form onSubmit={saveAccount} className="bg-white rounded-2xl shadow p-5 space-y-3 max-w-md">
+            <h2 className="text-lg font-semibold text-slate-800">Apna email ya password badlo</h2>
+            <p className="text-sm text-slate-500">
+              {'Abhi ka email: ' + user.email + '. Jo badalna hai wahi bharo, baaki khali chhod do.'}
+            </p>
+            <div>
+              <label className={labelClass}>Abhi ka password (zaroori)</label>
               <input
-                placeholder="Naam, roll ya department dhundo"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-64 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                type="password"
+                required
+                value={accountForm.currentPassword}
+                onChange={(e) => setAccountForm({ ...accountForm, currentPassword: e.target.value })}
+                className={inputClass}
               />
             </div>
-            {shownStudents.length === 0 && <p className="text-slate-500">Koi student nahi mila.</p>}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-500 border-b border-slate-200">
-                    <th className="py-2 pr-3">Roll</th>
-                    <th className="py-2 pr-3">Naam</th>
-                    <th className="py-2 pr-3">Class</th>
-                    <th className="py-2 pr-3">Email</th>
-                    <th className="py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shownStudents.map((s) => (
-                    <tr key={s._id} className="border-b border-slate-100">
-                      <td className="py-2 pr-3 text-slate-600">{s.rollNo || '-'}</td>
-                      <td className="py-2 pr-3 font-medium text-slate-800">{s.name}</td>
-                      <td className="py-2 pr-3 text-slate-600">
-                        {(s.department || '-') + ' Sem ' + (s.semester || '-')}
-                      </td>
-                      <td className="py-2 pr-3 text-slate-600">{s.email}</td>
-                      <td className="py-2 text-right">
-                        <button
-                          onClick={() => removeUser(s, 'Student')}
-                          className="text-red-600 hover:underline"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <label className={labelClass}>Naya email (optional)</label>
+              <input
+                type="email"
+                value={accountForm.newEmail}
+                onChange={(e) => setAccountForm({ ...accountForm, newEmail: e.target.value })}
+                className={inputClass}
+              />
             </div>
-          </div>
+            <div>
+              <label className={labelClass}>Naya password (optional, kam se kam 6 akshar)</label>
+              <input
+                type="password"
+                minLength={6}
+                value={accountForm.newPassword}
+                onChange={(e) => setAccountForm({ ...accountForm, newPassword: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            <button type="submit" disabled={busy} className={primaryBtn}>
+              Save karo
+            </button>
+          </form>
         )}
       </main>
+
+      {editing && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
+          <form
+            onSubmit={saveEdit}
+            className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 space-y-3 max-h-[90vh] overflow-y-auto"
+          >
+            <h2 className="text-lg font-semibold text-slate-800">
+              {editing.role === 'student' ? 'Student edit karo' : 'Teacher edit karo'}
+            </h2>
+            <div>
+              <label className={labelClass}>Naam</label>
+              <input
+                required
+                value={editing.name}
+                onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Email</label>
+              <input
+                type="email"
+                required
+                value={editing.email}
+                onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            {editing.role === 'student' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Department</label>
+                    <select
+                      required
+                      value={editing.department}
+                      onChange={(e) => setEditing({ ...editing, department: e.target.value })}
+                      className={inputClass}
+                    >
+                      <option value="">Chuno</option>
+                      {deptOptions}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Semester</label>
+                    <select
+                      required
+                      value={editing.semester}
+                      onChange={(e) => setEditing({ ...editing, semester: e.target.value })}
+                      className={inputClass}
+                    >
+                      <option value="">Chuno</option>
+                      {meta.semesters.map((n) => (
+                        <option key={n} value={String(n)}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>{'Roll number (1 se ' + meta.maxRoll + ')'}</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={meta.maxRoll}
+                    value={editing.rollNo}
+                    onChange={(e) => setEditing({ ...editing, rollNo: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            )}
+            <div>
+              <label className={labelClass}>Naya password (sirf badalna ho tab)</label>
+              <input
+                minLength={6}
+                value={editing.newPassword}
+                onChange={(e) => setEditing({ ...editing, newPassword: e.target.value })}
+                className={inputClass}
+              />
+            </div>
+            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={busy} className={primaryBtn}>
+                Save karo
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 
 const app = express();
+app.set('trust proxy', 1);
 const isProd = process.env.NODE_ENV === 'production';
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 

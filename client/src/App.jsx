@@ -2,11 +2,13 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import SessionQR from './pages/SessionQR';
 import SubjectReport from './pages/SubjectReport';
+import TeacherStudents from './pages/TeacherStudents';
 import StudentDashboard from './pages/StudentDashboard';
 import ScanQR from './pages/ScanQR';
 
@@ -24,6 +26,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/admin/login" element={<AdminLogin />} />
 
       <Route
@@ -56,6 +59,14 @@ export default function App() {
         element={
           <ProtectedRoute role="teacher">
             <SessionQR />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher/students"
+        element={
+          <ProtectedRoute role="teacher">
+            <TeacherStudents />
           </ProtectedRoute>
         }
       />
