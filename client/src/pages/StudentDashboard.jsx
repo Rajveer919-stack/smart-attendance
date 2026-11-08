@@ -152,6 +152,12 @@ export default function StudentDashboard() {
                     style={{ width: Math.min(r.percentage, 100) + '%' }}
                   />
                 </div>
+                                <Link
+                  to={'/student/calendar/' + r.subjectId}
+                  className="block text-center text-xs font-semibold text-indigo-600 hover:underline"
+                >
+                  Calendar dekho
+                </Link>
 
                 {r.totalClasses === 0 ? (
                   <p className="text-xs rounded-lg bg-slate-50 text-slate-600 px-3 py-2">

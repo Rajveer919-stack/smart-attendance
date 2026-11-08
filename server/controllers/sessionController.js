@@ -137,25 +137,31 @@ exports.getSessionAttendance = async (req, res) => {
       semester: subject.semester,
     }).sort({ rollNo: 1, name: 1 });
 
-    const records = await Attendance.find({ session: session._id });
-    const markedAt = {};
+    // Sirf status 'present' wale hi present maane jayenge
+    const records = await Attendance.find({ session: session._id, status: 'present' });
+    const presentMap = {};
     records.forEach((r) => {
-      markedAt[String(r.student)] = r.markedAt;
+      presentMap[String(r.student)] = r;
     });
 
-    const list = students.map((s) => ({
-      studentId: s._id,
-      name: s.name,
-      rollNo: s.rollNo,
-      status: markedAt[String(s._id)] ? 'present' : 'absent',
-      markedAt: markedAt[String(s._id)] || null,
-    }));
+    const list = students.map((s) => {
+      const rec = presentMap[String(s._id)];
+      return {
+        studentId: s._id,
+        name: s.name,
+        rollNo: s.rollNo,
+        status: rec ? 'present' : 'absent',
+        markedAt: rec ? rec.markedAt : null,
+        source: rec ? rec.source : null,
+      };
+    });
 
     const presentCount = list.filter((s) => s.status === 'present').length;
 
     res.json({
       sessionId: session._id,
       isActive: session.isActive,
+      startTime: session.startTime,
       subject: subject.name,
       total: list.length,
       presentCount,
@@ -164,6 +170,66 @@ exports.getSessionAttendance = async (req, res) => {
     });
   } catch (err) {
     res.status(400).json({ message: 'Session ID sahi nahi hai' });
+  }
+};
+
+// PUT /api/sessions/:id/attendance/:studentId   body: { status: 'present' | 'absent' }
+// Teacher haath se kisi student ki attendance lagata ya hatata hai
+exports.setManualAttendance = async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (status !== 'present' && status !== 'absent') {
+      return res.status(400).json({ message: 'status present ya absent hona chahiye' });
+    }
+
+    const session = await Session.findById(req.params.id);
+    if (!session) return res.status(404).json({ message: 'Session nahi mila' });
+
+    if (String(session.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'Ye session tumhara nahi hai' });
+    }
+
+    const subject = await Subject.findById(session.subject);
+    const student = await User.findById(req.params.studentId);
+    if (
+      !student ||
+      student.role !== 'student' ||
+      !subject ||
+      student.department !== subject.department ||
+      student.semester !== subject.semester
+    ) {
+      return res.status(400).json({ message: 'Ye student is class ka nahi hai' });
+    }
+
+    const existing = await Attendance.findOne({ session: session._id, student: student._id });
+
+    if (existing) {
+      if (existing.status !== status) {
+        existing.status = status;
+        if (status === 'present') existing.markedAt = new Date();
+      }
+      existing.editedBy = req.user._id;
+      await existing.save();
+    } else if (status === 'present') {
+      await Attendance.create({
+        session: session._id,
+        subject: subject._id,
+        student: student._id,
+        status: 'present',
+        // Haath se lagi attendance ke liye alag, kabhi na takraane wali device ID
+        deviceId: 'manual-' + student._id,
+        source: 'manual',
+        editedBy: req.user._id,
+      });
+    }
+    // existing nahi hai aur absent chahiye: kuch karna nahi, record na hona hi absent hai
+
+    res.json({ studentId: student._id, status });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(400).json({ message: 'Is student ki attendance pehle se hai, dobara try karo' });
+    }
+    res.status(400).json({ message: 'ID sahi nahi hai' });
   }
 };
 

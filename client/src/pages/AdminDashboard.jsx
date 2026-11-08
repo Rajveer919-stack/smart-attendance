@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
+import AdminCharts from '../components/AdminCharts';
 
 const inputClass =
   'w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500';
@@ -15,7 +16,7 @@ const emptyAccount = { currentPassword: '', newEmail: '', newPassword: '' };
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const [tab, setTab] = useState('students');
+  const [tab, setTab] = useState('overview');
   const [meta, setMeta] = useState({ departments: [], semesters: [1, 2, 3, 4, 5, 6, 7, 8], maxRoll: 300 });
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
@@ -221,6 +222,9 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+                    <button onClick={() => switchTab('overview')} className={tabClass('overview')}>
+            Overview
+          </button>
           <button onClick={() => switchTab('students')} className={tabClass('students')}>
             Students
           </button>
@@ -241,6 +245,7 @@ export default function AdminDashboard() {
         {notice && (
           <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{notice}</p>
         )}
+                {tab === 'overview' && <AdminCharts />}
 
         {tab === 'students' && (
           <div className="space-y-4">

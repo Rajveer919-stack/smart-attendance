@@ -1,11 +1,22 @@
 const express = require('express');
-const { getSubjectReport } = require('../controllers/analyticsController');
+const {
+  getSubjectReport,
+  getSubjectDaily,
+  exportSubjectExcel,
+  getOverview,
+} = require('../controllers/analyticsController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.use(protect, authorize('teacher', 'admin'));
+router.use(protect);
 
-router.get('/subject/:subjectId', getSubjectReport);
+// Sirf admin: dashboard ke charts
+router.get('/overview', authorize('admin'), getOverview);
+
+// Teacher (apna subject) ya admin (sab)
+router.get('/subject/:subjectId', authorize('teacher', 'admin'), getSubjectReport);
+router.get('/subject/:subjectId/daily', authorize('teacher', 'admin'), getSubjectDaily);
+router.get('/subject/:subjectId/export', authorize('teacher', 'admin'), exportSubjectExcel);
 
 module.exports = router;

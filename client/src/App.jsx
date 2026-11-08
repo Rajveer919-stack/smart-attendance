@@ -8,9 +8,11 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import TeacherDashboard from './pages/TeacherDashboard';
 import SessionQR from './pages/SessionQR';
+import SessionEdit from './pages/SessionEdit';
 import SubjectReport from './pages/SubjectReport';
 import TeacherStudents from './pages/TeacherStudents';
 import StudentDashboard from './pages/StudentDashboard';
+import AttendanceCalendar from './pages/AttendanceCalendar';
 import ScanQR from './pages/ScanQR';
 
 // Login hona zaroori hai, aur role bhi sahi hona chahiye
@@ -47,6 +49,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/student/calendar/:subjectId"
+          element={
+            <ProtectedRoute role="student">
+              <AttendanceCalendar />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/teacher"
@@ -61,6 +71,14 @@ export default function App() {
           element={
             <ProtectedRoute role="teacher">
               <SessionQR />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/session/:id/attendance"
+          element={
+            <ProtectedRoute role="teacher">
+              <SessionEdit />
             </ProtectedRoute>
           }
         />

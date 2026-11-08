@@ -1,3 +1,4 @@
+import { registerExtra } from './extra';
 // Hinglish -> English dictionary for the language switcher.
 // The pages keep their original (Hinglish) text. When English is selected, the LanguageGate
 // component swaps the visible text using this list, so no page file has to be changed.
@@ -194,7 +195,7 @@ const PATTERNS = [
   [/^Roll number 1 se (\d+) ke beech ka poora number (?:hona chahiye|ho)$/, 'Roll number must be a whole number between 1 and $1'],
   [/^(Roll number|Roll) 1 se (\d+) ke beech hona chahiye$/, 'Roll number must be between 1 and $2'],
 ];
-
+registerExtra(PAIRS, PATTERNS);
 const isSingleWord = (key) => key.trim().indexOf(' ') === -1;
 
 export function toEnglish(text) {

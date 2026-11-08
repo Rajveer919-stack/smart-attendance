@@ -9,6 +9,10 @@ const attendanceSchema = new mongoose.Schema(
     markedAt: { type: Date, default: Date.now },
     // Proxy rokne ke liye: ek device se ek session me ek hi student
     deviceId: { type: String, required: true },
+    // Attendance kaise lagi: QR se ya teacher ne haath se lagayi
+    source: { type: String, enum: ['qr', 'manual'], default: 'qr' },
+    // Teacher ne badli ho to kisne badli
+    editedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 );
