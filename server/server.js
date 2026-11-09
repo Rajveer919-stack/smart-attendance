@@ -14,7 +14,18 @@ app.use(express.json());
 
 // Deploy hone par built frontend yahin se dikhega
 if (isProd) {
-  app.use(express.static(clientDist));
+  // dotfiles: allow, taki /.well-known/assetlinks.json (Play Store ke liye) bhi mil sake
+  app.use(
+    express.static(clientDist, {
+      dotfiles: 'allow',
+      setHeaders: (res, filePath) => {
+        // Service worker aur manifest hamesha naye milne chahiye
+        if (/(sw\.js|manifest\.webmanifest)$/.test(filePath)) {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      },
+    })
+  );
 } else {
   app.get('/', (req, res) => {
     res.json({ message: 'Smart Attendance API chal raha hai' });
