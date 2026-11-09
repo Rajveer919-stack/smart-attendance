@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 // Student, Teacher aur Admin teeno dashboard ka ek jaisa sundar header
 export default function AppHeader({ label, actions }) {
@@ -32,6 +33,7 @@ export default function AppHeader({ label, actions }) {
 
         <div className="flex items-center gap-2 shrink-0">
           {actions}
+          <ThemeToggle />
           <span className="hidden sm:block text-sm text-white/85 max-w-[10rem] truncate">
             {user ? user.name : ''}
           </span>

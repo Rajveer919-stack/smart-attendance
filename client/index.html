@@ -12,6 +12,16 @@
     <meta name="apple-mobile-web-app-title" content="Attendance" />
     <meta name="description" content="Smart Attendance: QR se attendance lagao aur apni attendance dekho" />
     <title>Smart Attendance</title>
+    <script>
+      // Page dikhne se pehle hi saved theme laga do, taki safed flash na aaye
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

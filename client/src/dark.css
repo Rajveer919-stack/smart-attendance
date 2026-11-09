@@ -1,0 +1,244 @@
+/* Dark mode (Midnight Indigo): <html> par "dark" class lagte hi poora app gehre neele-kaale rang me aa jata hai.
+   Sirf screen par chalta hai, Print / PDF hamesha safed hi nikalta hai. */
+@media screen {
+  html.dark {
+    color-scheme: dark;
+    --d-bg: #060913;
+    --d-card: #0e1424;
+    --d-card-2: #131b30;
+    --d-line: rgba(148, 163, 184, 0.12);
+    --d-text: #e8edf7;
+    --d-muted: #93a2bb;
+    --d-accent: #a5b4fc;
+  }
+
+  /* ---- Poora page ka background: gehra neela-kaala, upar halki violet chamak ---- */
+  html.dark body {
+    color: var(--d-text);
+    background-color: var(--d-bg);
+    background-image:
+      radial-gradient(900px 480px at 85% -8%, rgba(99, 102, 241, 0.2), transparent 60%),
+      radial-gradient(700px 420px at -5% 105%, rgba(124, 58, 237, 0.14), transparent 60%);
+    background-attachment: fixed;
+  }
+  html.dark .min-h-screen.bg-slate-100 {
+    background-color: transparent;
+  }
+  html.dark ::selection {
+    background: rgba(129, 140, 248, 0.45);
+    color: #fff;
+  }
+
+  /* ---- Cards: gehra rang + patli chamakti kinara-rekha ---- */
+  html.dark .bg-white {
+    background-color: var(--d-card);
+    box-shadow: 0 0 0 1px var(--d-line), 0 10px 28px -14px rgba(0, 0, 0, 0.75);
+  }
+  html.dark .shadow,
+  html.dark .shadow-md,
+  html.dark .shadow-lg,
+  html.dark .shadow-xl,
+  html.dark .shadow-2xl {
+    box-shadow: 0 0 0 1px var(--d-line), 0 10px 28px -14px rgba(0, 0, 0, 0.75);
+  }
+  html.dark .bg-slate-50 {
+    background-color: var(--d-card-2);
+  }
+  html.dark .bg-slate-100 {
+    background-color: #182037;
+  }
+  html.dark .bg-slate-200,
+  html.dark .bg-slate-300 {
+    background-color: #26324d;
+  }
+
+  /* ---- Header, login, scan page ke gradient: gehre indigo se violet ---- */
+  html.dark .from-indigo-700 {
+    --tw-gradient-from: #14123a;
+  }
+  html.dark .via-indigo-600 {
+    --tw-gradient-via: #272068;
+  }
+  html.dark .to-violet-700 {
+    --tw-gradient-to: #3b1a78;
+  }
+  html.dark .from-indigo-600 {
+    --tw-gradient-from: #2a2378;
+  }
+  html.dark .to-violet-600 {
+    --tw-gradient-to: #4a1d96;
+  }
+  html.dark .from-indigo-500 {
+    --tw-gradient-from: #6366f1;
+  }
+  html.dark .to-violet-500 {
+    --tw-gradient-to: #8b5cf6;
+  }
+
+  /* ---- Rangeen chhote dabbe aur message ---- */
+  html.dark .bg-indigo-50 {
+    background-color: rgba(99, 102, 241, 0.14);
+  }
+  html.dark .bg-indigo-100 {
+    background-color: rgba(99, 102, 241, 0.22);
+  }
+  html.dark .bg-red-50 {
+    background-color: rgba(244, 63, 94, 0.12);
+  }
+  html.dark .bg-red-100 {
+    background-color: rgba(244, 63, 94, 0.2);
+  }
+  html.dark .bg-green-50 {
+    background-color: rgba(16, 185, 129, 0.12);
+  }
+  html.dark .bg-green-100 {
+    background-color: rgba(16, 185, 129, 0.2);
+  }
+  html.dark .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.12);
+  }
+  html.dark .bg-amber-100 {
+    background-color: rgba(245, 158, 11, 0.2);
+  }
+  /* box-shadow wali rekha in dabbon par nahi chahiye */
+  html.dark .bg-indigo-50,
+  html.dark .bg-red-50,
+  html.dark .bg-green-50,
+  html.dark .bg-amber-50 {
+    box-shadow: none;
+  }
+
+  /* ---- Text ---- */
+  html.dark .text-slate-900,
+  html.dark .text-slate-800 {
+    color: #f4f7fd;
+  }
+  html.dark .text-slate-700 {
+    color: var(--d-text);
+  }
+  html.dark .text-slate-600 {
+    color: #c3cee0;
+  }
+  html.dark .text-slate-500 {
+    color: var(--d-muted);
+  }
+  html.dark .text-slate-400 {
+    color: #7d8ca6;
+  }
+  html.dark .text-indigo-700,
+  html.dark .text-indigo-600,
+  html.dark .text-indigo-500 {
+    color: var(--d-accent);
+  }
+  html.dark .text-red-700,
+  html.dark .text-red-600 {
+    color: #fda4af;
+  }
+  html.dark .text-green-700 {
+    color: #6ee7b7;
+  }
+  html.dark .text-amber-800 {
+    color: #fcd34d;
+  }
+
+  /* ---- Rekhayen ---- */
+  html.dark .border-slate-100,
+  html.dark .border-slate-200,
+  html.dark .border-slate-300 {
+    border-color: var(--d-line);
+  }
+  html.dark .border-indigo-200 {
+    border-color: rgba(129, 140, 248, 0.35);
+  }
+  html.dark .divide-slate-100 > :not(:last-child) {
+    border-color: var(--d-line);
+  }
+
+  /* ---- Table: header halka, row par hover chamak ---- */
+  html.dark table thead tr {
+    color: var(--d-muted);
+  }
+  html.dark table tbody tr {
+    transition: background-color 0.15s;
+  }
+  html.dark table tbody tr:hover {
+    background-color: rgba(99, 102, 241, 0.07);
+  }
+
+  /* ---- Hover ---- */
+  html.dark .hover\:bg-slate-50:hover {
+    background-color: #182037;
+  }
+  html.dark .hover\:bg-slate-200:hover {
+    background-color: #2c3a58;
+  }
+  html.dark .hover\:bg-indigo-50:hover,
+  html.dark .hover\:bg-indigo-100:hover {
+    background-color: rgba(99, 102, 241, 0.24);
+  }
+
+  /* ---- Buttons: asli rang wahi, bas halki chamak ---- */
+  html.dark .bg-indigo-600 {
+    background-image: linear-gradient(135deg, #4f46e5, #6d4fe0);
+    box-shadow: 0 6px 18px -8px rgba(99, 102, 241, 0.7);
+  }
+  html.dark .bg-green-600 {
+    background-color: #059669;
+  }
+  html.dark .bg-red-600 {
+    background-color: #e11d48;
+  }
+
+  /* ---- Form fields ---- */
+  html.dark input,
+  html.dark select,
+  html.dark textarea {
+    background-color: #0a1020;
+    color: var(--d-text);
+    border-color: rgba(148, 163, 184, 0.22);
+  }
+  html.dark input::placeholder,
+  html.dark textarea::placeholder {
+    color: #5f6f8a;
+  }
+  html.dark input:focus,
+  html.dark select:focus,
+  html.dark textarea:focus {
+    border-color: #818cf8;
+  }
+  html.dark .focus\:ring-indigo-500:focus {
+    --tw-ring-color: rgba(129, 140, 248, 0.55);
+  }
+  html.dark option {
+    background-color: #0a1020;
+    color: var(--d-text);
+  }
+  html.dark input[type='checkbox'],
+  html.dark input[type='range'] {
+    background-color: transparent;
+  }
+
+  /* ---- Charts (SVG) ---- */
+  html.dark .stroke-slate-200,
+  html.dark .stroke-slate-300 {
+    stroke: rgba(148, 163, 184, 0.25);
+  }
+  html.dark .fill-slate-500,
+  html.dark .fill-slate-400 {
+    fill: var(--d-muted);
+  }
+
+  /* ---- Scrollbar ---- */
+  html.dark * {
+    scrollbar-width: thin;
+    scrollbar-color: #2c3a58 transparent;
+  }
+  html.dark ::-webkit-scrollbar {
+      width: 10px;
+    height: 10px;
+  }
+  html.dark ::-webkit-scrollbar-thumb {
+    background: #2c3a58;
+    border-radius: 8px;
+  }
+}
