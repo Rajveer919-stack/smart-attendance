@@ -13,7 +13,23 @@ function getDeviceId() {
   return id;
 }
 
+// Phone ki location (location check ON ho to server isse student ki doori nikalta hai)
+function getPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }
+    );
+  });
+}
+
 export default function ScanQR() {
+  const geoRef = useRef(null); // scan shuru hote hi location maang lete hai
   const scannerRef = useRef(null);
   const handled = useRef(false);
   const zoomRef = useRef(null); // { feature, min, max, step, value }
@@ -47,9 +63,12 @@ export default function ScanQR() {
   const sendToken = async (token) => {
     setStatus('sending');
     try {
+      let pos = geoRef.current ? await geoRef.current : null;
+      if (!pos) pos = await getPosition();
       const { data } = await api.post('/attendance/mark', {
         token,
         deviceId: getDeviceId(),
+        ...(pos || {}),
       });
       setStatus('success');
       setMessage(data.subject + ': ' + data.message);
@@ -118,6 +137,7 @@ export default function ScanQR() {
     setMessage('');
     setStatus('scanning');
     handled.current = false;
+    geoRef.current = getPosition();
 
     const scanner = new Html5Qrcode('qr-reader');
     scannerRef.current = scanner;
@@ -173,6 +193,9 @@ export default function ScanQR() {
 
         <p className="text-sm text-slate-500">
           Teacher ki screen par jo QR dikh raha hai, use camera se scan karo.
+        </p>
+        <p className="text-xs text-slate-400">
+          Attendance ke liye phone ki location ON rakho aur allow karo.
         </p>
 
         <div

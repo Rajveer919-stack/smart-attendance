@@ -5,6 +5,11 @@ const Otp = require('../models/Otp');
 const bcrypt = require('bcryptjs');
 const { issueOtp, checkOtp } = require('../utils/otp');
 const { sendOtpMail } = require('../utils/mailer');
+const { logEvent } = require('../utils/audit');
+
+// 5 galat password ke baad account 15 minute ke liye band
+const MAX_FAILS = 5;
+const LOCK_MS = 15 * 60 * 1000;
 const {
   DEPARTMENTS,
   SEMESTERS,
@@ -152,8 +157,39 @@ exports.login = async (req, res) => {
     }
 
     const user = await User.findOne({ email }).select('+password');
+
+    // Account lock hai to password check hi nahi karte
+    if (user && user.lockUntil && user.lockUntil > new Date()) {
+      const mins = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
+      return res.status(423).json({ message: 'Account abhi band hai. ' + mins + ' minute baad try karo' });
+    }
+
     if (!user || !(await user.matchPassword(password))) {
+      if (user) {
+        const fails = (user.failedLogins || 0) + 1;
+        if (fails >= MAX_FAILS) {
+          await User.updateOne(
+            { _id: user._id },
+            { $set: { failedLogins: 0, lockUntil: new Date(Date.now() + LOCK_MS) } }
+          );
+          logEvent(
+            'login_locked',
+            'Account of ' + user.name + ' (' + user.email + ') was locked for 15 minutes after ' + MAX_FAILS +
+              ' wrong passwords',
+            { level: 'warn', req, actor: user }
+          );
+          return res
+            .status(423)
+            .json({ message: 'Bahut galat password. Account 15 minute ke liye band ho gaya' });
+        }
+        await User.updateOne({ _id: user._id }, { $set: { failedLogins: fails } });
+      }
       return res.status(401).json({ message: 'Email ya password galat hai' });
+    }
+
+    // Sahi password: galat try ginti saaf
+    if (user.failedLogins || user.lockUntil) {
+      await User.updateOne({ _id: user._id }, { $set: { failedLogins: 0 }, $unset: { lockUntil: 1 } });
     }
 
     res.json({ token: signToken(user._id), user: userResponse(user) });
@@ -246,6 +282,9 @@ exports.createUser = async (req, res) => {
     }
 
     const user = await User.create({ name, email, password, role, department });
+    logEvent('user_create', req.user.name + ' created a ' + role + ' account for ' + name + ' (' + email + ')', {
+      req,
+    });
     res.status(201).json({ user: userResponse(user) });
   } catch (err) {
     res.status(400).json({ message: friendlyError(err) });
@@ -285,6 +324,9 @@ exports.updateAccount = async (req, res) => {
     }
 
     await user.save();
+    logEvent('account_update', user.name + ' changed their own ' + (newPassword ? 'password' : 'email'), {
+      req,
+    });
     res.json({ message: 'Account update ho gaya', user: userResponse(user) });
   } catch (err) {
     res.status(400).json({ message: friendlyError(err) });

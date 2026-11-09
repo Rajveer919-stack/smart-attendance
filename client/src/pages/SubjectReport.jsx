@@ -19,6 +19,8 @@ export default function SubjectReport() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [alerting, setAlerting] = useState(false);
+  const [notice, setNotice] = useState('');
 
   const load = useCallback(
     async (f, t) => {
@@ -83,6 +85,20 @@ export default function SubjectReport() {
     }
   };
 
+  const sendAlerts = async () => {
+    setAlerting(true);
+    setError('');
+    setNotice('');
+    try {
+      const res = await api.post('/analytics/subject/' + id + '/alert');
+      setNotice(res.data.message);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Kuch galat ho gaya');
+    } finally {
+      setAlerting(false);
+    }
+  };
+
   const rows = data ? (onlyRisk ? data.report.filter((r) => r.atRisk) : data.report) : [];
 
   return (
@@ -99,6 +115,9 @@ export default function SubjectReport() {
 
         {error && (
           <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+        )}
+        {notice && (
+          <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{notice}</p>
         )}
         {!data && !error && <p className="text-slate-500">Load ho raha hai...</p>}
 
@@ -131,7 +150,15 @@ export default function SubjectReport() {
                   Filter hatao
                 </button>
               )}
-              <div className="flex gap-2 ml-auto">
+              <div className="flex flex-wrap gap-2 ml-auto">
+                <button
+                  type="button"
+                  onClick={sendAlerts}
+                  disabled={alerting}
+                  className="rounded-lg bg-red-600 text-white text-sm font-medium px-4 py-2 hover:bg-red-700 disabled:opacity-60"
+                >
+                  {alerting ? 'Email ja rahi hai...' : 'Kam attendance wale ko email bhejo'}
+                </button>
                 <button
                   type="button"
                   onClick={downloadExcel}

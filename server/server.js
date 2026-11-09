@@ -27,6 +27,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/sessions', require('./routes/sessionRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/security', require('./routes/securityRoutes'));
 
 // /api ke alawa baaki saare links frontend (React) ko jayenge
 if (isProd) {

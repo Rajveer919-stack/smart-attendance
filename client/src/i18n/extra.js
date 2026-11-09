@@ -30,6 +30,47 @@ const EXTRA_PAIRS = [
   ["Class nahi hui", "No class"],
   ["Calendar dekho", "View calendar"],
 
+  // ---- Batch 2: location, security, alerts ----
+  ["Student teacher ke phone ke paas ho, tabhi attendance lagegi. Teacher ko class shuru karte waqt location allow karni hogi.", "Attendance is marked only if the student is near the teacher's phone. The teacher must allow location when starting a class."],
+  ["Class khatam hote hi 75% se kam wale students ko email jaye (ek student ko 3 din me ek hi baar).", "Send an email to students below 75% as soon as a class ends (only once every 3 days per student)."],
+  ["Class shuru karte waqt phone ki location allow karo, taki students ki location check ho sake.", "Allow your phone's location when starting a class, so students' locations can be checked."],
+  ["Phone ki location ON karo aur allow karo. Students ki location isi se match hogi", "Turn on and allow your phone's location. Students' locations will be matched against it"],
+  ["Phone ki location ON karo aur allow karo, tabhi attendance lagegi", "Turn on and allow your phone's location, only then attendance will be marked"],
+  ["Attendance ke liye phone ki location ON rakho aur allow karo.", "Keep your phone's location ON and allow it for attendance."],
+  ["Pichhle 7 din me koi suspicious ghatna nahi hui.", "No suspicious activity in the last 7 days."],
+  ["Bahut galat password. Account 15 minute ke liye band ho gaya", "Too many wrong passwords. The account is locked for 15 minutes"],
+  ["Radius 30 se 2000 meter ke beech ka poora number ho", "Radius must be a whole number between 30 and 2000 meters"],
+  ["Kam attendance wale ko email bhejo", "Email students with low attendance"],
+  ["Kitni doori tak chalegi (meter)", "Allowed distance (meters)"],
+  ["Abhi koi account lock nahi hai.", "No account is locked right now."],
+  ["Apne aap email alert", "Automatic email alert"],
+  ["Ek phone se do students", "Two students on one phone"],
+  ["Phone share ho raha hai", "Phone is being shared"],
+  ["Abhi koi record nahi hai.", "No records yet."],
+  ["User ki details badli", "User details changed"],
+  ["Email ja rahi hai...", "Sending emails..."],
+  ["Account unlock ho gaya", "Account unlocked"],
+  ["Location nahi mili", "Location not received"],
+  ["Settings save ho gayi", "Settings saved"],
+  ["Kuch badalna to hai", "Nothing to change"],
+  ["Account unlock hua", "Account unlocked"],
+  ["Subject delete hua", "Subject deleted"],
+  ["Naya subject bana", "Subject created"],
+  ["User delete hua", "User deleted"],
+  ["Account lock hua", "Account locked"],
+  ["Kisne kya badla", "Who changed what"],
+  ["Email alert gaya", "Email alert sent"],
+  ["Attendance badli", "Attendance changed"],
+  ["Settings badli", "Settings changed"],
+  ["Activity log", "Activity log"],
+  ["Class se door", "Too far from class"],
+  ["Subject badla", "Subject changed"],
+  ["Account badla", "Account changed"],
+  ["Naya user bana", "User created"],
+  ["Unlock karo", "Unlock"],
+  ["Sab kuch", "Everything"],
+  ["Kya hua", "What happened"],
+
   // ---- Server ke messages ----
   ["Login karo pehle (token nahi mila)", "Please log in first (no token found)"],
   ["Tumhe is kaam ki permission nahi hai", "You do not have permission to do this"],
@@ -63,7 +104,11 @@ const EXTRA_PAIRS = [
 ];
 
 const EXTRA_PATTERNS = [
-  [/^(.*): (Present|Absent) kar diya$/, '$1: marked $2']
+  [/^(.*): (Present|Absent) kar diya$/, '$1: marked $2'],
+  [/^Account abhi band hai\. (\d+) minute baad try karo$/, 'The account is locked right now. Try again in $1 minute(s)'],
+  [/^Tum class se (\d+) meter door ho\. Class ke paas aakar scan karo$/, 'You are $1 meters away from the class. Come closer and scan again'],
+  [/^Pichhle 7 din me (\d+) suspicious ghatna hui\.$/, '$1 suspicious event(s) in the last 7 days.'],
+  [/^Sabse naye (\d+) record dikh rahe hai, kul (\d+)\.$/, 'Showing the latest $1 records, $2 in total.']
 ];
 
 export function registerExtra(pairs, patterns) {

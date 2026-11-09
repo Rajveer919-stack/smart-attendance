@@ -3,6 +3,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
 import AdminCharts from '../components/AdminCharts';
+import AdminSecurity from '../components/AdminSecurity';
 
 const inputClass =
   'w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500';
@@ -203,7 +204,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-     <AppHeader label="Admin Panel" />
+      <AppHeader label="Admin Panel" />
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <div className="grid grid-cols-3 gap-3 text-center">
@@ -222,7 +223,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-                    <button onClick={() => switchTab('overview')} className={tabClass('overview')}>
+          <button onClick={() => switchTab('overview')} className={tabClass('overview')}>
             Overview
           </button>
           <button onClick={() => switchTab('students')} className={tabClass('students')}>
@@ -233,6 +234,9 @@ export default function AdminDashboard() {
           </button>
           <button onClick={() => switchTab('subjects')} className={tabClass('subjects')}>
             Subjects
+          </button>
+          <button onClick={() => switchTab('security')} className={tabClass('security')}>
+            Security
           </button>
           <button onClick={() => switchTab('account')} className={tabClass('account')}>
             Account
@@ -245,7 +249,10 @@ export default function AdminDashboard() {
         {notice && (
           <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{notice}</p>
         )}
-                {tab === 'overview' && <AdminCharts />}
+
+        {tab === 'overview' && <AdminCharts />}
+
+        {tab === 'security' && <AdminSecurity />}
 
         {tab === 'students' && (
           <div className="space-y-4">

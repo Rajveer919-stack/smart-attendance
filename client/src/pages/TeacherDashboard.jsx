@@ -4,6 +4,21 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
 
+// Teacher ke phone ki location. Student isi ke paas hone chahiye (admin ne location check ON kiya ho to)
+function getPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+}
+
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -24,7 +39,8 @@ export default function TeacherDashboard() {
     setError('');
     setStartingId(subject._id);
     try {
-      const { data } = await api.post('/sessions/start', { subjectId: subject._id });
+      const pos = await getPosition();
+      const { data } = await api.post('/sessions/start', { subjectId: subject._id, ...(pos || {}) });
       navigate('/teacher/session/' + data.session.id, {
         state: { subjectName: subject.name },
       });
@@ -57,6 +73,9 @@ export default function TeacherDashboard() {
         </section>
 
         <h2 className="text-xl font-semibold text-slate-800">Mere subjects</h2>
+        <p className="text-xs text-slate-500">
+          Class shuru karte waqt phone ki location allow karo, taki students ki location check ho sake.
+        </p>
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
         {loading && <p className="text-slate-500">Load ho raha hai...</p>}

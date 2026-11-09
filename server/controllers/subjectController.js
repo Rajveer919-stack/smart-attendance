@@ -1,5 +1,6 @@
 const Subject = require('../models/Subject');
 const User = require('../models/User');
+const { logEvent } = require('../utils/audit');
 
 // POST /api/subjects  (admin)
 exports.createSubject = async (req, res) => {
@@ -23,6 +24,11 @@ exports.createSubject = async (req, res) => {
     }
 
     const subject = await Subject.create({ name, code, department, semester, teacher });
+    logEvent(
+      'subject_create',
+      req.user.name + ' created subject ' + subject.name + ' (' + subject.code + ') for ' + teacherUser.name,
+      { req }
+    );
     res.status(201).json({ subject });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -84,6 +90,9 @@ exports.updateSubject = async (req, res) => {
     }).populate('teacher', 'name email');
 
     if (!subject) return res.status(404).json({ message: 'Subject nahi mila' });
+    logEvent('subject_update', req.user.name + ' updated subject ' + subject.name + ' (' + subject.code + ')', {
+      req,
+    });
     res.json({ subject });
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -95,6 +104,9 @@ exports.deleteSubject = async (req, res) => {
   try {
     const subject = await Subject.findByIdAndDelete(req.params.id);
     if (!subject) return res.status(404).json({ message: 'Subject nahi mila' });
+    logEvent('subject_delete', req.user.name + ' deleted subject ' + subject.name + ' (' + subject.code + ')', {
+      req,
+    });
     res.json({ message: 'Subject delete ho gaya' });
   } catch (err) {
     res.status(400).json({ message: 'ID sahi nahi hai' });

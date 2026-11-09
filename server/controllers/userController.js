@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Subject = require('../models/Subject');
 const Attendance = require('../models/Attendance');
 const { friendlyError } = require('./authController');
+const { logEvent } = require('../utils/audit');
 const {
   DEPARTMENTS,
   MAX_ROLL,
@@ -182,6 +183,14 @@ exports.updateUser = async (req, res) => {
     }
 
     await user.save();
+    const changed = ['name', 'email', 'rollNo', 'department', 'semester', 'newPassword'].filter(
+      (k) => req.body[k] !== undefined && req.body[k] !== ''
+    );
+    logEvent(
+      'user_update',
+      req.user.name + ' edited ' + user.role + ' ' + user.name + ' (' + user.email + '): ' + changed.join(', '),
+      { req }
+    );
     const out = user.toObject();
     delete out.password;
     res.json({ message: 'Update ho gaya', user: out });
@@ -207,6 +216,9 @@ exports.deleteUser = async (req, res) => {
       await Attendance.deleteMany({ student: user._id });
     }
     await user.deleteOne();
+    logEvent('user_delete', req.user.name + ' deleted ' + user.role + ' ' + user.name + ' (' + user.email + ')', {
+      req,
+    });
     res.json({ message: 'Delete ho gaya' });
   } catch (err) {
     res.status(500).json({ message: err.message });

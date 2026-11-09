@@ -5,6 +5,10 @@ const Session = require('../models/Session');
 const Subject = require('../models/Subject');
 const Attendance = require('../models/Attendance');
 const User = require('../models/User');
+const { getSettings } = require('../utils/settings');
+const { isValidCoord } = require('../utils/geo');
+const { logEvent } = require('../utils/audit');
+const { sendAlertsForSubject } = require('./alertController');
 
 // QR kitni der valid rahega (seconds)
 const QR_VALIDITY_SECONDS = 30;
@@ -31,6 +35,18 @@ exports.startSession = async (req, res) => {
       return res.status(403).json({ message: 'Ye subject tumhara nahi hai' });
     }
 
+    // Teacher ke phone ki location. Location check ON ho to ye dena zaroori hai
+    const lat = typeof req.body.lat === 'number' ? req.body.lat : NaN;
+    const lng = typeof req.body.lng === 'number' ? req.body.lng : NaN;
+    const accuracy = typeof req.body.accuracy === 'number' ? req.body.accuracy : 0;
+    const hasLocation = isValidCoord(lat, lng);
+    const settings = await getSettings();
+    if (settings.geoEnabled && !hasLocation) {
+      return res.status(400).json({
+        message: 'Phone ki location ON karo aur allow karo. Students ki location isi se match hogi',
+      });
+    }
+
     // Is subject ka koi purana active session ho toh band kar do
     await Session.updateMany(
       { subject: subject._id, teacher: req.user._id, isActive: true },
@@ -42,6 +58,7 @@ exports.startSession = async (req, res) => {
       subject: subject._id,
       teacher: req.user._id,
       qrSecret,
+      ...(hasLocation ? { location: { lat, lng, accuracy } } : {}),
     });
 
     res.status(201).json({
@@ -99,6 +116,17 @@ exports.endSession = async (req, res) => {
     session.isActive = false;
     session.endTime = new Date();
     await session.save();
+
+    // Auto alert ON ho to kam attendance wale students ko email (piche chalta hai)
+    try {
+      const settings = await getSettings();
+      if (settings.autoAlerts) {
+        const subject = await Subject.findById(session.subject);
+        if (subject) sendAlertsForSubject(subject, { auto: true }).catch(() => {});
+      }
+    } catch {
+      // alert na bhej paye to bhi class band honi chahiye
+    }
 
     res.json({ message: 'Session band ho gaya', endTime: session.endTime });
   } catch (err) {
@@ -223,6 +251,13 @@ exports.setManualAttendance = async (req, res) => {
       });
     }
     // existing nahi hai aur absent chahiye: kuch karna nahi, record na hona hi absent hai
+
+    logEvent(
+      'attendance_edit',
+      req.user.name + ' marked ' + student.name + ' (roll ' + (student.rollNo || '-') + ') as ' + status +
+        ' in ' + subject.name,
+      { req }
+    );
 
     res.json({ studentId: student._id, status });
   } catch (err) {

@@ -5,6 +5,7 @@ const {
   exportSubjectExcel,
   getOverview,
 } = require('../controllers/analyticsController');
+const { alertLowAttendance } = require('../controllers/alertController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.get('/overview', authorize('admin'), getOverview);
 router.get('/subject/:subjectId', authorize('teacher', 'admin'), getSubjectReport);
 router.get('/subject/:subjectId/daily', authorize('teacher', 'admin'), getSubjectDaily);
 router.get('/subject/:subjectId/export', authorize('teacher', 'admin'), exportSubjectExcel);
+router.post('/subject/:subjectId/alert', authorize('teacher', 'admin'), alertLowAttendance);
 
 module.exports = router;

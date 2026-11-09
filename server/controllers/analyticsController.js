@@ -209,7 +209,7 @@ exports.exportSubjectExcel = async (req, res) => {
         s.totalClasses - s.attended,
         s.percentage / 100,
         s.atRisk ? 'Below 75%' : 'OK',
-      ]);
+        ]);
       row.getCell(7).numFmt = '0.0%';
       if (s.atRisk) row.eachCell((cell) => (cell.font = { color: red }));
     });
@@ -502,3 +502,7 @@ exports.getStudentCalendar = async (req, res) => {
     res.status(400).json({ message: 'Subject ID sahi nahi hai' });
   }
 };
+
+// Alert controller bhi ye use karta hai
+exports.buildSubjectReport = buildSubjectReport;
+exports.loadSubject = loadSubject;
