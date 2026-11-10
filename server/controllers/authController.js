@@ -21,7 +21,7 @@ const {
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: '365d',
   });
 
 const userResponse = (user) => ({
@@ -150,7 +150,7 @@ exports.registerVerify = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const email = cleanEmail(req.body.email);
-    const password = req.body.password;
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
 
     if (!email || !password) {
       return res.status(400).json({ message: 'email aur password daalo' });

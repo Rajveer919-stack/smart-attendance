@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
+import { getDeviceId, getPosition } from '../utils/device';
 
 const RADIUS = 28;
 const CIRCLE = 2 * Math.PI * RADIUS;
@@ -13,12 +14,12 @@ function tone(percentage) {
   return { text: 'text-red-600', stroke: '#dc2626', bar: 'bg-red-500', chip: 'bg-red-50 text-red-700' };
 }
 
-function Ring({ percentage }) {
+function Ring({ percentage, size = 64 }) {
   const p = Math.max(0, Math.min(100, Number(percentage) || 0));
   const t = tone(p);
   return (
-    <div className="relative h-16 w-16 shrink-0">
-      <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 64 64" className="-rotate-90" style={{ width: size, height: size }}>
         <circle cx="32" cy="32" r={RADIUS} fill="none" stroke="#e2e8f0" strokeWidth="6" />
         <circle
           cx="32"
@@ -32,32 +33,135 @@ function Ring({ percentage }) {
           strokeDashoffset={CIRCLE * (1 - p / 100)}
         />
       </svg>
-      <span className={'absolute inset-0 flex items-center justify-center text-sm font-bold ' + t.text}>
+      <span
+        className={'absolute inset-0 flex items-center justify-center font-bold ' + t.text}
+        style={{ fontSize: size > 80 ? 20 : 14 }}
+      >
         {Math.round(p) + '%'}
       </span>
     </div>
   );
 }
 
+const SOURCE_LABEL = { qr: 'QR se', code: 'Code se', manual: 'Teacher ne lagayi' };
+
+const timeText = (value) =>
+  new Date(value).toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
 export default function StudentDashboard() {
   const { user } = useAuth();
   const [report, setReport] = useState([]);
+  const [live, setLive] = useState([]);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [code, setCode] = useState('');
+  const [sending, setSending] = useState(false);
+  const [codeMsg, setCodeMsg] = useState({ type: '', text: '' });
+  const [installEvent, setInstallEvent] = useState(null);
+  const codeRef = useRef(null);
+
+  const loadReport = useCallback(async () => {
+    try {
+      const [rep, hist] = await Promise.all([api.get('/attendance/me'), api.get('/attendance/history')]);
+      setReport(rep.data.report);
+      setHistory(hist.data.history);
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Report load nahi hui');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadLive = useCallback(async () => {
+    try {
+      const { data } = await api.get('/attendance/live');
+      setLive(data.classes);
+    } catch {
+      // agli baar phir koshish hogi
+    }
+  }, []);
 
   useEffect(() => {
-    api
-      .get('/attendance/me')
-      .then((res) => setReport(res.data.report))
-      .catch((err) => setError(err.response?.data?.message || 'Report load nahi hui'))
-      .finally(() => setLoading(false));
+    loadReport();
+    loadLive();
+    // Chalti class har 10 second me dekho (sirf jab app saamne khula ho)
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') loadLive();
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [loadReport, loadLive]);
+
+  // "App install karo" ka button (Android Chrome)
+  useEffect(() => {
+    const onPrompt = (e) => {
+      e.preventDefault();
+      setInstallEvent(e);
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
   }, []);
+
+  const install = async () => {
+    if (!installEvent) return;
+    installEvent.prompt();
+    try {
+      await installEvent.userChoice;
+    } catch {
+      // koi baat nahi
+    }
+    setInstallEvent(null);
+  };
+
+  const submitCode = async (e) => {
+    e.preventDefault();
+    if (!/^\d{4}$/.test(code)) {
+      setCodeMsg({ type: 'error', text: '4 ank ka code daalo' });
+      return;
+    }
+    setSending(true);
+    setCodeMsg({ type: '', text: 'Location dekh rahe hai...' });
+    try {
+      const pos = await getPosition();
+      if (!pos) {
+        setCodeMsg({
+          type: 'error',
+          text: 'Phone ki location ON karo aur allow karo, tabhi code se attendance lagegi',
+        });
+        return;
+      }
+      const { data } = await api.post('/attendance/mark-code', {
+        code,
+        deviceId: getDeviceId(),
+        ...pos,
+      });
+      setCodeMsg({ type: 'ok', text: data.subject + ': ' + data.message });
+      setCode('');
+      loadLive();
+      loadReport();
+    } catch (err) {
+      setCodeMsg({
+        type: 'error',
+        text: err.response?.data?.message || 'Server se connect nahi ho pa raha',
+      });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const riskCount = report.filter((r) => r.atRisk).length;
   const totalAttended = report.reduce((sum, r) => sum + (r.attended || 0), 0);
   const totalHeld = report.reduce((sum, r) => sum + (r.totalClasses || 0), 0);
   const overall = totalHeld > 0 ? Math.round((totalAttended / totalHeld) * 1000) / 10 : 0;
   const overallTone = tone(overall);
+  const pending = live.filter((c) => !c.marked);
+  const allDone = live.length > 0 && pending.length === 0;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -74,40 +178,153 @@ export default function StudentDashboard() {
           </div>
         </section>
 
-        <Link
-          to="/student/scan"
-          className="flex items-center justify-center gap-3 rounded-2xl bg-white shadow-md border border-indigo-100 py-4 text-indigo-700 font-semibold text-lg hover:bg-indigo-50"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-7 w-7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        {installEvent && (
+          <button
+            onClick={install}
+            className="w-full flex items-center justify-between gap-3 rounded-2xl bg-white shadow px-4 py-3 text-left"
           >
-            <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
-            <path d="M4 12h16" />
-          </svg>
-          QR scan karke attendance lagao
-        </Link>
+            <span>
+              <span className="block font-semibold text-slate-800">App install karo</span>
+              <span className="block text-xs text-slate-500">Home screen se seedha khulega, login yaad rahega</span>
+            </span>
+            <span className="rounded-lg bg-indigo-600 text-white text-sm font-medium px-3 py-1.5">Install</span>
+          </button>
+        )}
+
+        {/* Abhi chal rahi class */}
+        <section className="bg-white rounded-2xl shadow p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <span
+              className={
+                'h-2.5 w-2.5 rounded-full ' + (live.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-300')
+              }
+            />
+            <h2 className="text-lg font-semibold text-slate-800">
+              {live.length > 0 ? 'Abhi class chal rahi hai' : 'Abhi koi class chalu nahi hai'}
+            </h2>
+          </div>
+
+          {live.map((c) => (
+            <div
+              key={c.sessionId}
+              className={
+                'flex items-center justify-between rounded-xl px-3 py-2 ' +
+                (c.marked ? 'bg-green-50' : 'bg-indigo-50')
+              }
+            >
+              <div>
+                <p className="font-medium text-slate-800">{c.subject}</p>
+                <p className="text-xs text-slate-500">{c.code}</p>
+              </div>
+              <span
+                className={
+                  'text-xs font-semibold rounded-full px-3 py-1 ' +
+                  (c.marked ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800')
+                }
+              >
+                {c.marked ? 'Attendance lag gayi' : 'Attendance baaki hai'}
+              </span>
+            </div>
+          ))}
+
+          {live.length === 0 && (
+            <p className="text-sm text-slate-500">Teacher class shuru karega to yaha dikh jayegi.</p>
+          )}
+
+          {pending.length > 0 && (
+            <div className="space-y-3 pt-1">
+              <Link
+                to="/student/scan"
+                className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white font-semibold py-3 hover:bg-indigo-700"
+              >
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+                  <path d="M4 12h16" />
+                </svg>
+                QR scan karke attendance lagao
+              </Link>
+
+              <form onSubmit={submitCode} className="rounded-xl border border-slate-200 p-3 space-y-2">
+                <p className="text-sm font-medium text-slate-700">Camera nahi chal raha? 4 ank ka code daalo</p>
+                <p className="text-xs text-slate-500">
+                  Teacher ki screen par jo code dikh raha hai wo daalo (har 15 second me badalta hai). Class ke 100 meter ke andar hona zaroori hai.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    ref={codeRef}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="one-time-code"
+                    placeholder="0000"
+                    maxLength={4}
+                    className="w-32 rounded-xl border border-slate-300 px-3 py-2.5 text-center text-2xl font-bold tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={sending || code.length !== 4}
+                    className="flex-1 rounded-xl bg-violet-600 text-white font-semibold px-3 hover:bg-violet-700 disabled:opacity-60"
+                  >
+                    {sending ? 'Lag rahi hai...' : 'Code se attendance lagao'}
+                  </button>
+                </div>
+                {codeMsg.text && (
+                  <p
+                    className={
+                      'text-sm rounded-lg px-3 py-2 ' +
+                      (codeMsg.type === 'ok'
+                        ? 'text-green-700 bg-green-50'
+                        : codeMsg.type === 'error'
+                          ? 'text-red-600 bg-red-50'
+                          : 'text-slate-600 bg-slate-50')
+                    }
+                  >
+                    {codeMsg.text}
+                  </p>
+                )}
+              </form>
+
+              <p className="text-xs text-slate-500">
+                Phone nahi hai? Teacher ke paas jaakar apna roll number batao, wo haath se attendance laga denge.
+              </p>
+            </div>
+          )}
+
+          {allDone && (
+            <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
+              Is class ki tumhari attendance lag chuki hai.
+            </p>
+          )}
+        </section>
 
         {!loading && report.length > 0 && (
-          <section className="grid grid-cols-3 gap-3 text-center">
-            <div className="bg-white rounded-2xl shadow py-4">
-              <p className={'text-2xl font-extrabold ' + overallTone.text}>{overall + '%'}</p>
-              <p className="text-xs text-slate-500 mt-1">Overall</p>
+          <section className="grid gap-3 sm:grid-cols-[auto_1fr]">
+            <div className="bg-white rounded-2xl shadow p-4 flex items-center gap-4">
+              <Ring percentage={overall} size={96} />
+              <div>
+                <p className="text-sm text-slate-500">Poori attendance</p>
+                <p className={'text-lg font-bold ' + overallTone.text}>
+                  {overall >= 75 ? 'Sab theek hai' : 'Dhyan do'}
+                </p>
+                <p className="text-xs text-slate-500">{totalAttended + ' / ' + totalHeld + ' class'}</p>
+              </div>
             </div>
-            <div className="bg-white rounded-2xl shadow py-4">
-              <p className="text-2xl font-extrabold text-slate-800">{report.length}</p>
-              <p className="text-xs text-slate-500 mt-1">Subjects</p>
-            </div>
-            <div className="bg-white rounded-2xl shadow py-4">
-              <p className={'text-2xl font-extrabold ' + (riskCount > 0 ? 'text-red-600' : 'text-green-600')}>
-                {riskCount}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">Risk me</p>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="bg-white rounded-2xl shadow py-4 flex flex-col justify-center">
+                <p className="text-2xl font-extrabold text-slate-800">{report.length}</p>
+                <p className="text-xs text-slate-500 mt-1">Subjects</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow py-4 flex flex-col justify-center">
+                <p className={'text-2xl font-extrabold ' + (riskCount > 0 ? 'text-red-600' : 'text-green-600')}>
+                  {riskCount}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">Risk me</p>
+              </div>
+              <div className="bg-white rounded-2xl shadow py-4 flex flex-col justify-center">
+                <p className="text-2xl font-extrabold text-indigo-600">{totalHeld - totalAttended}</p>
+                <p className="text-xs text-slate-500 mt-1">Absent</p>
+              </div>
             </div>
           </section>
         )}
@@ -147,17 +364,8 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
-                  <div
-                    className={'h-full ' + t.bar}
-                    style={{ width: Math.min(r.percentage, 100) + '%' }}
-                  />
+                  <div className={'h-full ' + t.bar} style={{ width: Math.min(r.percentage, 100) + '%' }} />
                 </div>
-                                <Link
-                  to={'/student/calendar/' + r.subjectId}
-                  className="block text-center text-xs font-semibold text-indigo-600 hover:underline"
-                >
-                  Calendar dekho
-                </Link>
 
                 {r.totalClasses === 0 ? (
                   <p className="text-xs rounded-lg bg-slate-50 text-slate-600 px-3 py-2">
@@ -174,10 +382,35 @@ export default function StudentDashboard() {
                       : 'Sab theek hai, par ab koi class chhodna mat.'}
                   </p>
                 )}
+
+                <Link
+                  to={'/student/calendar/' + r.subjectId}
+                  className="block text-center text-sm text-indigo-600 font-medium"
+                >
+                  Calendar dekho
+                </Link>
               </div>
             );
           })}
         </div>
+
+        <section className="bg-white rounded-2xl shadow p-4 space-y-2">
+          <h2 className="text-lg font-semibold text-slate-800">Haal hi ki attendance</h2>
+          {history.length === 0 && <p className="text-sm text-slate-500">Abhi tak koi attendance nahi lagi.</p>}
+          <ul className="divide-y divide-slate-100">
+            {history.map((h) => (
+              <li key={h.id} className="flex items-center justify-between py-2 gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-800 truncate">{h.subject}</p>
+                  <p className="text-xs text-slate-500">{timeText(h.markedAt)}</p>
+                </div>
+                <span className="shrink-0 text-xs font-semibold rounded-full px-3 py-1 bg-green-100 text-green-700">
+                  {SOURCE_LABEL[h.source] || 'Present'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
     </div>
   );

@@ -9,6 +9,7 @@ const { getSettings } = require('../utils/settings');
 const { isValidCoord } = require('../utils/geo');
 const { logEvent } = require('../utils/audit');
 const { sendAlertsForSubject } = require('./alertController');
+const { currentCode } = require('../utils/code');
 
 // QR kitni der valid rahega (seconds)
 const QR_VALIDITY_SECONDS = 30;
@@ -91,13 +92,38 @@ exports.getQr = async (req, res) => {
 
     const token = generateQrToken(session._id, session.qrSecret);
     const qrImage = await QRCode.toDataURL(token, { width: 320, margin: 1 });
+    const c = currentCode(session.qrSecret);
 
     res.json({
       sessionId: session._id,
       token,
       qrImage, // <img src={qrImage} /> me seedha laga sakte ho
       expiresInSeconds: QR_VALIDITY_SECONDS,
+      code: c.code,
+      codeSecondsLeft: c.secondsLeft,
+      hasLocation: !!(session.location && typeof session.location.lat === 'number'),
     });
+  } catch (err) {
+    res.status(400).json({ message: 'Session ID sahi nahi hai' });
+  }
+};
+
+// GET /api/sessions/:id/code
+// Class ka 4 digit code (har 15 second me badalta hai). Teacher ki screen isse dikhati hai
+exports.getCode = async (req, res) => {
+  try {
+    const session = await Session.findById(req.params.id).select('+qrSecret');
+    if (!session) return res.status(404).json({ message: 'Session nahi mila' });
+
+    if (String(session.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'Ye session tumhara nahi hai' });
+    }
+    if (!session.isActive) {
+      return res.status(400).json({ message: 'Ye session band ho chuka hai' });
+    }
+
+    const c = currentCode(session.qrSecret);
+    res.json({ code: c.code, secondsLeft: c.secondsLeft, stepSeconds: c.stepSeconds });
   } catch (err) {
     res.status(400).json({ message: 'Session ID sahi nahi hai' });
   }

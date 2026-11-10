@@ -17,6 +17,11 @@ const userSchema = new mongoose.Schema(
     },
     department: { type: String, trim: true },
     semester: { type: Number, min: 1, max: 8 },
+    // Galat password lockout: 5 galat try ke baad kuch der ke liye account band
+    failedLogins: { type: Number, default: 0 },
+    lockUntil: { type: Date },
+    // Password badalne ka samay. Isse pehle ke purane login (token) apne aap band ho jate hai
+    passwordChangedAt: { type: Date },
   },
   { timestamps: true }
 );
@@ -31,8 +36,11 @@ userSchema.index(
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
   // OTP verify ke baad password pehle se hash hota hai, dobara hash nahi karna
-  if (this.$locals && this.$locals.skipHash) return;
-  this.password = await bcrypt.hash(this.password, 10);
+  if (!(this.$locals && this.$locals.skipHash)) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  // Naye account ke alawa, password badla to purane login band
+  if (!this.isNew) this.passwordChangedAt = new Date();
 });
 
 userSchema.methods.matchPassword = function (plain) {

@@ -6,6 +6,18 @@ const { verifyQrToken } = require('./sessionController');
 const { getSettings } = require('../utils/settings');
 const { distanceMeters, isValidCoord } = require('../utils/geo');
 const { logEvent } = require('../utils/audit');
+const { codeMatches } = require('../utils/code');
+
+// 4 digit code se attendance sirf itni doori (meter) tak lagti hai
+const CODE_RADIUS_M = 100;
+// Code andaze se na khule: ek student 10 minute me 6 galat code tak daal sakta hai
+const MAX_WRONG = 6;
+const WRONG_WINDOW_MS = 10 * 60 * 1000;
+const wrongTries = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of wrongTries) if (v.resetAt < now) wrongTries.delete(k);
+}, 60 * 1000).unref();
 
 const who = (u) => u.name + ' (roll ' + (u.rollNo || '-') + ')';
 
@@ -96,6 +108,7 @@ exports.markAttendance = async (req, res) => {
       student: req.user._id,
       deviceId,
       distanceM,
+      source: 'qr',
     });
 
     // Ek hi phone se alag-alag students ki attendance lagti ho to likh lo
@@ -145,6 +158,207 @@ exports.markAttendance = async (req, res) => {
       }
       return res.status(400).json({ message: 'Tumhari attendance pehle hi lag chuki hai' });
     }
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// POST /api/attendance/mark-code   body: { code, deviceId, lat, lng, accuracy }   (student)
+// Jiska camera kharab ho wo teacher ke screen ka 4 digit code daal kar attendance laga sakta hai
+exports.markByCode = async (req, res) => {
+  let session = null;
+  let subject = null;
+  try {
+    const key = String(req.user._id);
+    const now = Date.now();
+    let tries = wrongTries.get(key);
+    if (tries && tries.resetAt < now) tries = null;
+    if (tries && tries.count >= MAX_WRONG) {
+      const mins = Math.ceil((tries.resetAt - now) / 60000);
+      return res.status(429).json({ message: 'Bahut galat code daale. ' + mins + ' minute baad try karo' });
+    }
+
+    const code = String(req.body.code || '').trim();
+    const deviceId = String(req.body.deviceId || '').slice(0, 100);
+    if (!/^\d{4}$/.test(code)) {
+      return res.status(400).json({ message: 'Code 4 ank ka hona chahiye' });
+    }
+    if (!deviceId) {
+      return res.status(400).json({ message: 'token aur deviceId zaroori hai' });
+    }
+
+    // Code se attendance ke liye location hamesha zaroori hai
+    const lat = typeof req.body.lat === 'number' ? req.body.lat : NaN;
+    const lng = typeof req.body.lng === 'number' ? req.body.lng : NaN;
+    const accuracy = typeof req.body.accuracy === 'number' ? req.body.accuracy : 0;
+    if (!isValidCoord(lat, lng)) {
+      logEvent(
+        'no_location',
+        who(req.user) + ' tried to mark attendance with a code without sharing location',
+        { level: 'warn', req }
+      );
+      return res.status(400).json({
+        message: 'Code se attendance ke liye phone ki location ON karo aur allow karo',
+      });
+    }
+
+    // Is student ki class ke chalu sessions
+    const subjects = await Subject.find({
+      department: req.user.department,
+      semester: req.user.semester,
+    }).select('_id');
+    const sessions = await Session.find({
+      subject: { $in: subjects.map((x) => x._id) },
+      isActive: true,
+    }).select('+qrSecret');
+    if (sessions.length === 0) {
+      return res.status(404).json({ message: 'Abhi tumhari class ki koi class chalu nahi hai' });
+    }
+
+    session = sessions.find((x) => codeMatches(x.qrSecret, code));
+    if (!session) {
+      const next = tries ? tries : { count: 0, resetAt: now + WRONG_WINDOW_MS };
+      next.count += 1;
+      wrongTries.set(key, next);
+      logEvent('code_wrong', who(req.user) + ' entered a wrong attendance code', {
+        level: 'warn',
+        req,
+      });
+      if (next.count >= MAX_WRONG) {
+        logEvent('code_locked', who(req.user) + ' was blocked for 10 minutes after too many wrong codes', {
+          level: 'warn',
+          req,
+        });
+      }
+      return res.status(400).json({ message: 'Code galat hai ya purana ho gaya. Teacher ki screen ka naya code dekho' });
+    }
+
+    subject = await Subject.findById(session.subject);
+
+    if (!session.location || typeof session.location.lat !== 'number') {
+      return res.status(400).json({
+        message: 'Teacher ne class me location allow nahi ki, isliye code se attendance nahi lag sakti. QR scan karo ya teacher se kaho',
+      });
+    }
+
+    const d = distanceMeters(session.location, { lat, lng });
+    const distanceM = Math.round(d);
+    const effective = Math.max(0, d - Math.min(Math.max(accuracy, 0), 50));
+    if (effective > CODE_RADIUS_M) {
+      logEvent(
+        'out_of_range',
+        who(req.user) + ' tried to mark ' + subject.name + ' with a code from ' + distanceM + ' m away (limit ' +
+          CODE_RADIUS_M + ' m)',
+        { level: 'warn', req, meta: { distanceM, accuracy, via: 'code' } }
+      );
+      return res.status(403).json({
+        message: 'Tum class se ' + distanceM + ' meter door ho. Class ke paas aakar scan karo',
+      });
+    }
+
+    const attendance = await Attendance.create({
+      session: session._id,
+      subject: subject._id,
+      student: req.user._id,
+      deviceId,
+      distanceM,
+      source: 'code',
+    });
+    wrongTries.delete(key);
+
+    res.status(201).json({
+      message: 'Attendance lag gayi',
+      subject: subject.name,
+      markedAt: attendance.markedAt,
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      if (err.keyPattern && err.keyPattern.deviceId) {
+        try {
+          const other = await Attendance.findOne({ session: session._id, deviceId: req.body.deviceId })
+            .populate('student', 'name rollNo')
+            .lean();
+          logEvent(
+            'device_reuse',
+            who(req.user) + ' tried to mark ' + (subject ? subject.name : 'a class') +
+              ' with a code from a phone already used by ' +
+              (other && other.student ? who(other.student) : 'another student'),
+            { level: 'warn', req }
+          );
+        } catch {
+          // log na likh paye to bhi student ko jawab dena hai
+        }
+        return res
+          .status(400)
+          .json({ message: 'Is device se is session me pehle hi attendance lag chuki hai' });
+      }
+      return res.status(400).json({ message: 'Tumhari attendance pehle hi lag chuki hai' });
+    }
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/attendance/live   (student)
+// Abhi tumhari kaun si class chal rahi hai aur attendance lagi ya nahi
+exports.getLiveClasses = async (req, res) => {
+  try {
+    const subjects = await Subject.find({
+      department: req.user.department,
+      semester: req.user.semester,
+    }).select('name code');
+    const byId = {};
+    subjects.forEach((x) => {
+      byId[String(x._id)] = x;
+    });
+
+    const sessions = await Session.find({
+      subject: { $in: subjects.map((x) => x._id) },
+      isActive: true,
+    })
+      .select('subject startTime')
+      .lean();
+
+    const marked = await Attendance.find({
+      student: req.user._id,
+      status: 'present',
+      session: { $in: sessions.map((x) => x._id) },
+    })
+      .select('session')
+      .lean();
+    const done = new Set(marked.map((m) => String(m.session)));
+
+    res.json({
+      classes: sessions.map((x) => ({
+        sessionId: x._id,
+        subject: byId[String(x.subject)] ? byId[String(x.subject)].name : '-',
+        code: byId[String(x.subject)] ? byId[String(x.subject)].code : '',
+        startedAt: x.startTime,
+        marked: done.has(String(x._id)),
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/attendance/history   (student)
+// Pichhli 15 baar kab attendance lagi
+exports.getHistory = async (req, res) => {
+  try {
+    const rows = await Attendance.find({ student: req.user._id, status: 'present' })
+      .sort({ markedAt: -1 })
+      .limit(15)
+      .populate('subject', 'name code')
+      .lean();
+    res.json({
+      history: rows.map((r) => ({
+        id: r._id,
+        subject: r.subject ? r.subject.name : '-',
+        code: r.subject ? r.subject.code : '',
+        markedAt: r.markedAt,
+        source: r.source || 'qr',
+      })),
+    });
+  } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };

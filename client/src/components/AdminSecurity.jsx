@@ -18,6 +18,8 @@ const TYPE_LABELS = {
   account_update: 'Account badla',
   alert_sent: 'Email alert gaya',
   settings_update: 'Settings badli',
+    code_wrong: 'Galat code daala',
+  code_locked: 'Code ki koshish roki gayi',
 };
 
 const timeText = (value) =>

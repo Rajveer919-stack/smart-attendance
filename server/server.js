@@ -3,14 +3,25 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const { securityHeaders, sanitize, apiLimiter, checkEnv } = require('./middleware/security');
 
 const app = express();
+app.disable('x-powered-by');
 app.set('trust proxy', 1);
 const isProd = process.env.NODE_ENV === 'production';
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 
+checkEnv();
+
+// Security headers sabse pehle (website aur API dono ke jawab par lagte hai)
+app.use(securityHeaders);
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
-app.use(express.json());
+// Bahut bada data bhej kar server girane ki koshish rokne ke liye limit
+app.use(express.json({ limit: '100kb' }));
+// MongoDB injection (jaise {"$gt": ""}) wale keys hata do
+app.use(sanitize);
+// Ek IP se bahut zyada requests par roak
+app.use('/api', apiLimiter);
 
 // Deploy hone par built frontend yahin se dikhega
 if (isProd) {
@@ -40,12 +51,30 @@ app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/security', require('./routes/securityRoutes'));
 
+// Jo API exist nahi karti uska saaf jawab
+app.use('/api', (req, res) => {
+  res.status(404).json({ message: 'Ye API nahi mili' });
+});
+
 // /api ke alawa baaki saare links frontend (React) ko jayenge
 if (isProd) {
   app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
+
+// Koi bhi error ho, server ka andar ka raaz (stack) bahar nahi jata
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  if (err && err.type === 'entity.too.large') {
+    return res.status(413).json({ message: 'Data bahut bada hai' });
+  }
+  if (err && err.type === 'entity.parse.failed') {
+    return res.status(400).json({ message: 'Data sahi format me nahi hai' });
+  }
+  console.error(err);
+  res.status(500).json({ message: 'Server me kuch gadbad ho gayi. Thodi der baad try karo' });
+});
 
 const PORT = process.env.PORT || 5000;
 

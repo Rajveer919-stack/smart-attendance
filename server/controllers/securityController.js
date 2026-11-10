@@ -4,7 +4,7 @@ const { getSettings, saveSettings } = require('../utils/settings');
 const { logEvent } = require('../utils/audit');
 
 // Suspicious activity wale types. Baaki sab audit (kisne kya badla) me aate hai
-const SECURITY_TYPES = ['device_reuse', 'shared_device', 'out_of_range', 'no_location', 'login_locked'];
+const SECURITY_TYPES = ['device_reuse', 'shared_device', 'out_of_range', 'no_location', 'login_locked', 'code_wrong', 'code_locked'];
 
 // GET /api/security/logs?group=security|audit|all&limit=100&skip=0   (admin)
 exports.getLogs = async (req, res) => {
