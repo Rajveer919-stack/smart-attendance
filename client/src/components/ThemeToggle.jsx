@@ -25,7 +25,8 @@ function applyTheme(dark) {
   if (meta) meta.setAttribute('content', dark ? '#312e81' : '#4f46e5');
 }
 
-export default function ThemeToggle() {
+// className na do to purana (header wala) rang use hoga
+export default function ThemeToggle({ className }) {
   const [dark, setDark] = useState(initialDark);
 
   useEffect(() => {
@@ -48,7 +49,10 @@ export default function ThemeToggle() {
       onClick={toggle}
       title={dark ? 'Light mode' : 'Dark mode'}
       aria-label={dark ? 'Light mode chalu karo' : 'Dark mode chalu karo'}
-      className="h-9 w-9 shrink-0 rounded-lg bg-white/15 hover:bg-white/25 ring-1 ring-white/30 flex items-center justify-center"
+      className={
+        className ||
+        'h-9 w-9 shrink-0 rounded-lg bg-white/15 hover:bg-white/25 ring-1 ring-white/30 flex items-center justify-center'
+      }
     >
       {dark ? (
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

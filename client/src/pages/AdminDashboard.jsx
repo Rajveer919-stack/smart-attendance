@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import AppHeader from '../components/AppHeader';
+import DashboardShell, { Stat } from '../components/DashboardShell';
 import AdminCharts from '../components/AdminCharts';
 import AdminSecurity from '../components/AdminSecurity';
 
@@ -14,6 +14,16 @@ const primaryBtn =
 const emptyTeacher = { name: '', email: '', password: '', department: '' };
 const emptySubject = { name: '', code: '', department: '', semester: '6', teacher: '' };
 const emptyAccount = { currentPassword: '', newEmail: '', newPassword: '' };
+
+// Side menu (laptop) aur neeche ka tab bar (phone) ke items
+const ADMIN_NAV = [
+  { key: 'overview', label: 'Overview', icon: 'chart' },
+  { key: 'students', label: 'Students', icon: 'users' },
+  { key: 'teachers', label: 'Teachers', icon: 'teacher' },
+  { key: 'subjects', label: 'Subjects', icon: 'book' },
+  { key: 'security', label: 'Security', icon: 'shield' },
+  { key: 'account', label: 'Account', icon: 'user' },
+];
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -190,11 +200,7 @@ export default function AdminDashboard() {
     });
   }, [students]);
 
-  const tabClass = (name) =>
-    'px-4 py-2 rounded-lg text-sm font-medium ' +
-    (tab === name
-      ? 'bg-indigo-600 text-white'
-      : 'bg-white text-slate-700 hover:bg-slate-50 shadow');
+  const nav = ADMIN_NAV.map((n) => ({ ...n, onClick: () => switchTab(n.key) }));
 
   const deptOptions = meta.departments.map((d) => (
     <option key={d} value={d}>
@@ -203,46 +209,8 @@ export default function AdminDashboard() {
   ));
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <AppHeader label="Admin Panel" />
-
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-white rounded-xl shadow py-3">
-            <p className="text-2xl font-bold text-slate-800">{teachers.length}</p>
-            <p className="text-xs text-slate-500">Teachers</p>
-          </div>
-          <div className="bg-white rounded-xl shadow py-3">
-            <p className="text-2xl font-bold text-slate-800">{subjects.length}</p>
-            <p className="text-xs text-slate-500">Subjects</p>
-          </div>
-          <div className="bg-white rounded-xl shadow py-3">
-            <p className="text-2xl font-bold text-slate-800">{students.length}</p>
-            <p className="text-xs text-slate-500">Students</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => switchTab('overview')} className={tabClass('overview')}>
-            Overview
-          </button>
-          <button onClick={() => switchTab('students')} className={tabClass('students')}>
-            Students
-          </button>
-          <button onClick={() => switchTab('teachers')} className={tabClass('teachers')}>
-            Teachers
-          </button>
-          <button onClick={() => switchTab('subjects')} className={tabClass('subjects')}>
-            Subjects
-          </button>
-          <button onClick={() => switchTab('security')} className={tabClass('security')}>
-            Security
-          </button>
-          <button onClick={() => switchTab('account')} className={tabClass('account')}>
-            Account
-          </button>
-        </div>
-
+    <DashboardShell label="Admin Panel" nav={nav} active={tab}>
+      <div className="space-y-4">
         {error && (
           <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
         )}
@@ -250,7 +218,16 @@ export default function AdminDashboard() {
           <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">{notice}</p>
         )}
 
-        {tab === 'overview' && <AdminCharts />}
+        {tab === 'overview' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <Stat icon="teacher" tone="violet" label="Teachers" value={teachers.length} />
+              <Stat icon="book" tone="sky" label="Subjects" value={subjects.length} />
+              <Stat icon="calendar" tone="emerald" label="Classes" value={classCounts.length} />
+            </div>
+            <AdminCharts />
+          </div>
+        )}
 
         {tab === 'security' && <AdminSecurity />}
 
@@ -589,7 +566,7 @@ export default function AdminDashboard() {
             </button>
           </form>
         )}
-      </main>
+      </div>
 
       {editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
@@ -690,6 +667,6 @@ export default function AdminDashboard() {
           </form>
         </div>
       )}
-    </div>
+    </DashboardShell>
   );
 }

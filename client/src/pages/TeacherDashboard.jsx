@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import AppHeader from '../components/AppHeader';
+import DashboardShell, { Stat } from '../components/DashboardShell';
 
 // Teacher ke phone ki location. Student isi ke paas hone chahiye (admin ne location check ON kiya ho to)
 function getPosition() {
@@ -21,6 +21,12 @@ function getPosition() {
 
 // Band hui class itni der tak dobara khul sakti hai (server me bhi yahi limit hai)
 const REOPEN_MINUTES = 30;
+
+const TEACHER_NAV = [
+  { key: 'home', label: 'Home', icon: 'home', to: '/teacher' },
+  { key: 'ann', label: 'Announcements', icon: 'megaphone', to: '/teacher/announcements' },
+  { key: 'students', label: 'Students', icon: 'users', to: '/teacher/students' },
+];
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -88,20 +94,9 @@ export default function TeacherDashboard() {
     }
   };
 
-  const actions = (
-    <Link
-      to="/teacher/students"
-      className="rounded-lg bg-white text-indigo-700 text-sm font-semibold px-3 py-1.5 hover:bg-indigo-50"
-    >
-      Class-wise students
-    </Link>
-  );
-
   return (
-    <div className="min-h-screen bg-slate-100">
-      <AppHeader label="Teacher Dashboard" actions={actions} />
-
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+    <DashboardShell label="Teacher Dashboard" nav={TEACHER_NAV} active="home">
+      <div className="space-y-5">
         <section className="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white p-5 shadow-lg">
           <p className="text-sm text-white/80">Namaste,</p>
           <h1 className="text-2xl sm:text-3xl font-extrabold">{user.name}</h1>
@@ -115,6 +110,12 @@ export default function TeacherDashboard() {
             Class ko announcement bhejo
           </Link>
         </section>
+
+        <div className="grid grid-cols-3 gap-3">
+          <Stat icon="book" tone="indigo" label="Subjects" value={subjects.length} />
+          <Stat icon="play" tone="emerald" label="Chal rahi class" value={running.length} />
+          <Stat icon="clock" tone="amber" label="Dobara khul sakti" value={recent.length} />
+        </div>
 
         {(running.length > 0 || recent.length > 0) && (
           <section className="bg-white rounded-2xl shadow p-4 space-y-3">
@@ -198,7 +199,7 @@ export default function TeacherDashboard() {
             </div>
           ))}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }

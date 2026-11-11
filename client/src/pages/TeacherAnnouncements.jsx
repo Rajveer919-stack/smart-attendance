@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import api from '../api/axios';
-import AppHeader from '../components/AppHeader';
+import DashboardShell from '../components/DashboardShell';
+
+const TEACHER_NAV = [
+  { key: 'home', label: 'Home', icon: 'home', to: '/teacher' },
+  { key: 'ann', label: 'Announcements', icon: 'megaphone', to: '/teacher/announcements' },
+  { key: 'students', label: 'Students', icon: 'users', to: '/teacher/students' },
+];
 
 const timeText = (value) =>
   new Date(value).toLocaleString('en-IN', {
@@ -71,20 +76,9 @@ export default function TeacherAnnouncements() {
     }
   };
 
-  const actions = (
-    <Link
-      to="/teacher"
-      className="rounded-lg bg-white text-indigo-700 text-sm font-semibold px-3 py-1.5 hover:bg-indigo-50"
-    >
-      Wapas
-    </Link>
-  );
-
   return (
-    <div className="min-h-screen bg-slate-100">
-      <AppHeader label="Announcements" actions={actions} />
-
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+    <DashboardShell label="Announcements" nav={TEACHER_NAV} active="ann">
+      <div className="max-w-3xl mx-auto space-y-5">
         <form onSubmit={send} className="bg-white rounded-2xl shadow p-5 space-y-3">
           <h1 className="text-xl font-semibold text-slate-800">Class ko message bhejo</h1>
           <p className="text-xs text-slate-500">
@@ -166,7 +160,7 @@ export default function TeacherAnnouncements() {
             ))}
           </ul>
         </section>
-      </main>
-    </div>
+      </div>
+    </DashboardShell>
   );
 }

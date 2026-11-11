@@ -1,0 +1,440 @@
+/* Glass dashboard: side menu (laptop), neeche tab bar (phone), shishe jaise cards.
+   Sirf .dash-shell ke andar ka hissa badalta hai. Print / PDF par kuch nahi badalta. */
+@media screen {
+  .dash-shell {
+    --g-card: rgba(255, 255, 255, 0.62);
+    --g-card-strong: rgba(255, 255, 255, 0.9);
+    --g-line: rgba(255, 255, 255, 0.85);
+    --g-shadow: 0 12px 32px -14px rgba(67, 56, 202, 0.28), 0 2px 6px rgba(30, 41, 59, 0.05);
+    --g-text: #0f172a;
+    --g-muted: #64748b;
+    min-height: 100vh;
+    min-height: 100dvh;
+    position: relative;
+    color: var(--g-text);
+    background: #eef2ff;
+  }
+  html.dark .dash-shell {
+    --g-card: rgba(15, 22, 41, 0.62);
+    --g-card-strong: rgba(15, 22, 41, 0.94);
+    --g-line: rgba(255, 255, 255, 0.08);
+    --g-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.8);
+    --g-text: #e8edf7;
+    --g-muted: #93a2bb;
+    background: #060913;
+  }
+
+  /* Piche ki halki rangeen roshni (scroll karne par bhi wahin rehti hai) */
+  .dash-shell::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(58rem 34rem at 6% -8%, rgba(99, 102, 241, 0.3), transparent 62%),
+      radial-gradient(46rem 30rem at 100% 2%, rgba(56, 189, 248, 0.28), transparent 62%),
+      radial-gradient(48rem 30rem at 72% 108%, rgba(167, 139, 250, 0.3), transparent 62%),
+      linear-gradient(180deg, #eef4ff 0%, #f4f0ff 100%);
+  }
+  html.dark .dash-shell::before {
+    background:
+      radial-gradient(58rem 34rem at 6% -8%, rgba(99, 102, 241, 0.22), transparent 62%),
+      radial-gradient(46rem 30rem at 100% 2%, rgba(14, 116, 144, 0.2), transparent 62%),
+      radial-gradient(48rem 30rem at 72% 108%, rgba(124, 58, 237, 0.2), transparent 62%),
+      linear-gradient(180deg, #060913 0%, #0a0f1f 100%);
+  }
+
+  /* ---------- Side menu (laptop / badi screen) ---------- */
+  .dash-side {
+    display: none;
+  }
+  .dash-main {
+    position: relative;
+    z-index: 1;
+  }
+  .dash-content {
+    max-width: 74rem;
+    margin: 0 auto;
+    padding: 6px 16px calc(104px + env(safe-area-inset-bottom));
+    animation: dash-in 0.28s ease both;
+  }
+  @keyframes dash-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .dash-top {
+    max-width: 74rem;
+    margin: 0 auto;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .dash-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .dash-logo {
+    height: 40px;
+    width: 40px;
+    flex: none;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    box-shadow: 0 8px 18px -8px rgba(79, 70, 229, 0.7);
+  }
+  .dash-brand b {
+    display: block;
+    font-size: 15px;
+    line-height: 1.15;
+    font-weight: 800;
+  }
+  .dash-brand small {
+    display: block;
+    font-size: 12px;
+    color: var(--g-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dash-top-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+  }
+  .dash-date {
+    display: none;
+    font-size: 13px;
+    color: var(--g-muted);
+  }
+  .dash-icon-btn {
+    height: 40px;
+    width: 40px;
+    flex: none;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--g-text);
+    background: var(--g-card);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 0 0 1px var(--g-line), var(--g-shadow);
+    cursor: pointer;
+    border: 0;
+  }
+  .dash-icon-btn:hover {
+    background: var(--g-card-strong);
+  }
+
+  /* ---------- Neeche ka tab bar (phone / tablet) ---------- */
+  .dash-tabs {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    z-index: 40;
+    display: flex;
+    gap: 2px;
+    padding: 6px;
+    border-radius: 24px;
+    background: var(--g-card);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
+    box-shadow: 0 0 0 1px var(--g-line), 0 18px 40px -12px rgba(30, 27, 75, 0.4);
+  }
+  .dash-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 2px;
+    border-radius: 18px;
+    border: 0;
+    background: transparent;
+    color: var(--g-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.1;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .dash-tab span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dash-tab.is-on {
+    color: #fff;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    box-shadow: 0 8px 18px -8px rgba(79, 70, 229, 0.8);
+  }
+
+  /* ---------- Laptop: side menu dikhao, tab bar chhupao ---------- */
+  @media (min-width: 1024px) {
+    .dash-side {
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      z-index: 30;
+      left: 16px;
+      top: 16px;
+      bottom: 16px;
+      width: 248px;
+      padding: 16px 12px 12px;
+      border-radius: 28px;
+      background: var(--g-card);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      backdrop-filter: blur(22px) saturate(160%);
+      box-shadow: 0 0 0 1px var(--g-line), var(--g-shadow);
+    }
+    .dash-main {
+      margin-left: 280px;
+    }
+    .dash-tabs {
+      display: none;
+    }
+    .dash-logout-mobile {
+      display: none;
+    }
+    .dash-top {
+      padding-top: 22px;
+      padding-bottom: 14px;
+      padding-left: 28px;
+      padding-right: 28px;
+    }
+    .dash-top .dash-brand,
+    .dash-top .dash-logo {
+      display: none;
+    }
+    .dash-top .dash-page {
+      display: block;
+    }
+    .dash-date {
+      display: block;
+    }
+    .dash-content {
+      padding: 6px 28px 40px;
+    }
+  }
+  .dash-page {
+    display: none;
+  }
+  .dash-page b {
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .dash-page small {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--g-muted);
+  }
+
+  .dash-side .dash-brand {
+    padding: 4px 8px 16px;
+  }
+  .dash-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .dash-nav-title {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--g-muted);
+  }
+  .dash-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 16px;
+    border: 0;
+    background: transparent;
+    color: var(--g-text);
+    font-size: 14.5px;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .dash-link:hover {
+    background: rgba(99, 102, 241, 0.1);
+  }
+  .dash-link.is-on {
+    color: #fff;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    box-shadow: 0 10px 22px -10px rgba(79, 70, 229, 0.85);
+  }
+  .dash-user {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(99, 102, 241, 0.08);
+  }
+  .dash-avatar {
+    height: 38px;
+    width: 38px;
+    flex: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  }
+  .dash-user p {
+    margin: 0;
+    min-width: 0;
+  }
+  .dash-user b {
+    display: block;
+    font-size: 13.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dash-user small {
+    display: block;
+    font-size: 11.5px;
+    color: var(--g-muted);
+  }
+  .dash-logout {
+    margin-top: 8px;
+    justify-content: center;
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.08);
+  }
+  .dash-logout:hover {
+    background: rgba(220, 38, 38, 0.16);
+  }
+  html.dark .dash-logout {
+    color: #fca5a5;
+  }
+
+  /* ---------- Stat card (bada number + chhota icon) ---------- */
+  .dash-stat {
+    border-radius: 24px;
+    padding: 16px;
+    background: var(--g-card);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: 0 0 0 1px var(--g-line), var(--g-shadow);
+  }
+  .dash-chip {
+    height: 38px;
+    width: 38px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dash-chip-indigo { color: #4338ca; background: rgba(99, 102, 241, 0.16); }
+  .dash-chip-emerald { color: #047857; background: rgba(16, 185, 129, 0.18); }
+  .dash-chip-amber { color: #b45309; background: rgba(245, 158, 11, 0.2); }
+  .dash-chip-rose { color: #be123c; background: rgba(244, 63, 94, 0.16); }
+  .dash-chip-sky { color: #0369a1; background: rgba(14, 165, 233, 0.18); }
+  .dash-chip-violet { color: #6d28d9; background: rgba(139, 92, 246, 0.18); }
+  html.dark .dash-chip-indigo { color: #a5b4fc; }
+  html.dark .dash-chip-emerald { color: #6ee7b7; }
+  html.dark .dash-chip-amber { color: #fcd34d; }
+  html.dark .dash-chip-rose { color: #fda4af; }
+  html.dark .dash-chip-sky { color: #7dd3fc; }
+  html.dark .dash-chip-violet { color: #c4b5fd; }
+  .dash-stat-value {
+    margin: 10px 0 0;
+    font-size: 30px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .dash-stat-label {
+    margin: 6px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--g-muted);
+  }
+  .dash-stat-hint {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--g-muted);
+    opacity: 0.85;
+  }
+
+  /* ---------- Purane cards ko bhi shishe jaisa banao (code badalne ki zarurat nahi) ---------- */
+  .dash-shell .bg-white {
+    background-color: var(--g-card);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: 0 0 0 1px var(--g-line), var(--g-shadow);
+  }
+  html.dark .dash-shell .bg-white {
+    background-color: var(--g-card);
+    box-shadow: 0 0 0 1px var(--g-line), var(--g-shadow);
+  }
+  .dash-shell .shadow,
+  .dash-shell .shadow-md,
+  .dash-shell .shadow-lg,
+  .dash-shell .shadow-xl {
+    box-shadow: 0 0 0 1px var(--g-line), var(--g-shadow);
+  }
+  .dash-shell .rounded-2xl.bg-white,
+  .dash-shell .rounded-xl.bg-white {
+    border-radius: 24px;
+  }
+  /* Edit wala popup: piche ka dhundhlapan nahi, saaf padhne layak */
+  .dash-shell .fixed .bg-white {
+    background-color: var(--g-card-strong);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html.dark .dash-shell .fixed .bg-white {
+    background-color: var(--g-card-strong);
+  }
+  .dash-shell input:not([type='checkbox']):not([type='range']),
+  .dash-shell select,
+  .dash-shell textarea {
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.7);
+  }
+  html.dark .dash-shell input:not([type='checkbox']):not([type='range']),
+  html.dark .dash-shell select,
+  html.dark .dash-shell textarea {
+    background-color: rgba(8, 12, 24, 0.6);
+  }
+  .dash-shell table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.06);
+  }
+}
