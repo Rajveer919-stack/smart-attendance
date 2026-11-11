@@ -9,6 +9,8 @@ const settingSchema = new mongoose.Schema(
     radiusMeters: { type: Number, default: 150, min: 30, max: 2000 },
     // Class khatam hone par kam attendance wale students ko apne aap email
     autoAlerts: { type: Boolean, default: false },
+    // Fingerprint/face lock sabke liye zaroori (ON ho to bina lock ke attendance nahi lagegi)
+    bioRequired: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

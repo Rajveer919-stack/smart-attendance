@@ -16,6 +16,7 @@ async function getSettings() {
     geoEnabled: !!doc.geoEnabled,
     radiusMeters: doc.radiusMeters || 150,
     autoAlerts: !!doc.autoAlerts,
+    bioRequired: !!doc.bioRequired,
   };
   cachedAt = Date.now();
   return cache;

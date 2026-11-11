@@ -19,6 +19,9 @@ function getPosition() {
   });
 }
 
+// Band hui class itni der tak dobara khul sakti hai (server me bhi yahi limit hai)
+const REOPEN_MINUTES = 30;
+
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -26,6 +29,8 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [startingId, setStartingId] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [reopeningId, setReopeningId] = useState(null);
 
   useEffect(() => {
     api
@@ -33,7 +38,40 @@ export default function TeacherDashboard() {
       .then((res) => setSubjects(res.data.subjects))
       .catch((err) => setError(err.response?.data?.message || 'Subjects load nahi hue'))
       .finally(() => setLoading(false));
+    api
+      .get('/sessions')
+      .then((res) => setSessions(res.data.sessions))
+      .catch(() => {});
   }, []);
+
+  // Abhi chalti classes, aur wo jo abhi-abhi band hui (late students ke liye dobara khul sakti hai)
+  const running = sessions.filter((s) => s.isActive);
+  const runningSubjects = new Set(running.map((s) => (s.subject ? String(s.subject._id) : '')));
+  const seen = new Set();
+  const recent = sessions.filter((s) => {
+    if (s.isActive || !s.endTime || !s.subject) return false;
+    const mins = (Date.now() - new Date(s.endTime).getTime()) / 60000;
+    if (mins > REOPEN_MINUTES) return false;
+    const sid = String(s.subject._id);
+    if (runningSubjects.has(sid) || seen.has(sid)) return false;
+    seen.add(sid);
+    return true;
+  });
+  const minutesLeft = (s) =>
+    Math.max(1, Math.ceil(REOPEN_MINUTES - (Date.now() - new Date(s.endTime).getTime()) / 60000));
+
+  const reopenClass = async (s) => {
+    setError('');
+    setReopeningId(s._id);
+    try {
+      const pos = await getPosition();
+      await api.post('/sessions/' + s._id + '/reopen', pos || {});
+      navigate('/teacher/session/' + s._id, { state: { subjectName: s.subject.name } });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Class dobara chalu nahi ho payi');
+      setReopeningId(null);
+    }
+  };
 
   const startClass = async (subject) => {
     setError('');
@@ -70,7 +108,50 @@ export default function TeacherDashboard() {
           <p className="mt-2 text-sm text-white/80">
             {subjects.length + ' subject tumhare naam par hai. Class shuru karo aur QR dikhao.'}
           </p>
+          <Link
+            to="/teacher/announcements"
+            className="mt-3 inline-block rounded-lg bg-white/20 hover:bg-white/30 ring-1 ring-white/30 text-sm font-semibold px-4 py-2"
+          >
+            Class ko announcement bhejo
+          </Link>
         </section>
+
+        {(running.length > 0 || recent.length > 0) && (
+          <section className="bg-white rounded-2xl shadow p-4 space-y-3">
+            {running.map((s) => (
+              <div key={s._id} className="flex items-center justify-between gap-3 rounded-xl bg-green-50 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-800 truncate">{s.subject ? s.subject.name : '-'}</p>
+                  <p className="text-xs text-green-700">Class chal rahi hai</p>
+                </div>
+                <Link
+                  to={'/teacher/session/' + s._id}
+                  state={{ subjectName: s.subject ? s.subject.name : '' }}
+                  className="shrink-0 rounded-lg bg-green-600 text-white text-sm font-medium px-3 py-1.5 hover:bg-green-700"
+                >
+                  QR dikhao
+                </Link>
+              </div>
+            ))}
+            {recent.map((s) => (
+              <div key={s._id} className="flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-800 truncate">{s.subject.name}</p>
+                  <p className="text-xs text-amber-800">
+                    {'Class band ho gayi. Late students ke liye ' + minutesLeft(s) + ' minute tak dobara chalu kar sakte ho.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => reopenClass(s)}
+                  disabled={reopeningId === s._id}
+                  className="shrink-0 rounded-lg bg-amber-600 text-white text-sm font-medium px-3 py-1.5 hover:bg-amber-700 disabled:opacity-60"
+                >
+                  {reopeningId === s._id ? 'Ho raha hai...' : 'Dobara chalu karo'}
+                </button>
+              </div>
+            ))}
+          </section>
+        )}
 
         <h2 className="text-xl font-semibold text-slate-800">Mere subjects</h2>
         <p className="text-xs text-slate-500">

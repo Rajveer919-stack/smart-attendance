@@ -18,8 +18,13 @@ const TYPE_LABELS = {
   account_update: 'Account badla',
   alert_sent: 'Email alert gaya',
   settings_update: 'Settings badli',
-    code_wrong: 'Galat code daala',
+  code_wrong: 'Galat code daala',
   code_locked: 'Code ki koshish roki gayi',
+  bio_failed: 'Fingerprint/face fail hua',
+  bio_enroll: 'Fingerprint/face lock ON',
+  bio_reset: 'Fingerprint/face lock reset',
+  session_reopen: 'Class dobara khuli',
+  announcement: 'Announcement bheji',
 };
 
 const timeText = (value) =>
@@ -58,6 +63,7 @@ export default function AdminSecurity() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -104,6 +110,20 @@ export default function AdminSecurity() {
     try {
       const res = await api.post('/security/unlock/' + u._id);
       setNotice(res.data.message);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Kuch galat ho gaya');
+    }
+  };
+
+  const resetBio = async (e) => {
+    e.preventDefault();
+    setError('');
+    setNotice('');
+    try {
+      const res = await api.post('/bio/reset', { email: resetEmail });
+      setNotice(res.data.message);
+      setResetEmail('');
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Kuch galat ho gaya');
@@ -163,8 +183,39 @@ export default function AdminSecurity() {
             label="Apne aap email alert"
             hint="Class khatam hote hi 75% se kam wale students ko email jaye (ek student ko 3 din me ek hi baar)."
           />
+
+          <Toggle
+            checked={settings.bioRequired}
+            onChange={(v) => save({ bioRequired: v })}
+            label="Fingerprint / Face lock sabke liye zaroori"
+            hint="ON karne par har student ko pehle apne phone me lock ON karna hoga, tabhi attendance lagegi. OFF rakho to lock sirf unke liye chalega jo khud ON karein."
+          />
         </div>
       )}
+
+      <form onSubmit={resetBio} className="bg-white rounded-2xl shadow p-5 space-y-3">
+        <h2 className="text-lg font-semibold text-slate-800">Student ka Fingerprint / Face lock reset karo</h2>
+        <p className="text-xs text-slate-500">
+          Student ka phone badla ho ya lock kharab ho to uska email daalo. Lock hat jayega aur wo naye phone par
+          dobara ON kar sakega.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="email"
+            required
+            value={resetEmail}
+            onChange={(e) => setResetEmail(e.target.value)}
+            placeholder="Student ka email"
+            className="flex-1 min-w-[12rem] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-indigo-600 text-white text-sm font-medium px-4 py-2 hover:bg-indigo-700"
+          >
+            Lock reset karo
+          </button>
+        </div>
+      </form>
 
       <div className="bg-white rounded-2xl shadow p-5 space-y-3">
         <h2 className="text-lg font-semibold text-slate-800">Locked accounts</h2>

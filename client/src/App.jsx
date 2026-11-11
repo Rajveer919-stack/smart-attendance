@@ -11,6 +11,7 @@ import SessionQR from './pages/SessionQR';
 import SessionEdit from './pages/SessionEdit';
 import SubjectReport from './pages/SubjectReport';
 import TeacherStudents from './pages/TeacherStudents';
+import TeacherAnnouncements from './pages/TeacherAnnouncements';
 import StudentDashboard from './pages/StudentDashboard';
 import AttendanceCalendar from './pages/AttendanceCalendar';
 import ScanQR from './pages/ScanQR';
@@ -87,6 +88,14 @@ export default function App() {
           element={
             <ProtectedRoute role="teacher">
               <TeacherStudents />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/announcements"
+          element={
+            <ProtectedRoute role="teacher">
+              <TeacherAnnouncements />
             </ProtectedRoute>
           }
         />

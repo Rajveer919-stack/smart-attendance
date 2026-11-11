@@ -4,6 +4,7 @@ const {
   getQr,
   getCode,
   endSession,
+  reopenSession,
   getMySessions,
   getSessionAttendance,
   setManualAttendance,
@@ -21,5 +22,6 @@ router.get('/:id/code', getCode);
 router.get('/:id/attendance', getSessionAttendance);
 router.put('/:id/attendance/:studentId', setManualAttendance);
 router.post('/:id/end', endSession);
+router.post('/:id/reopen', reopenSession);
 
 module.exports = router;

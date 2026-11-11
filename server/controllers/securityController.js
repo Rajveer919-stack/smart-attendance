@@ -4,7 +4,7 @@ const { getSettings, saveSettings } = require('../utils/settings');
 const { logEvent } = require('../utils/audit');
 
 // Suspicious activity wale types. Baaki sab audit (kisne kya badla) me aate hai
-const SECURITY_TYPES = ['device_reuse', 'shared_device', 'out_of_range', 'no_location', 'login_locked', 'code_wrong', 'code_locked'];
+const SECURITY_TYPES = ['device_reuse', 'shared_device', 'out_of_range', 'no_location', 'login_locked', 'code_wrong', 'code_locked', 'bio_failed'];
 
 // GET /api/security/logs?group=security|audit|all&limit=100&skip=0   (admin)
 exports.getLogs = async (req, res) => {
@@ -82,10 +82,11 @@ exports.getSettingsHandler = async (req, res) => {
 exports.updateSettingsHandler = async (req, res) => {
   try {
     const patch = {};
-    const { geoEnabled, radiusMeters, autoAlerts } = req.body;
+    const { geoEnabled, radiusMeters, autoAlerts, bioRequired } = req.body;
 
     if (geoEnabled !== undefined) patch.geoEnabled = !!geoEnabled;
     if (autoAlerts !== undefined) patch.autoAlerts = !!autoAlerts;
+    if (bioRequired !== undefined) patch.bioRequired = !!bioRequired;
     if (radiusMeters !== undefined) {
       const r = Number(radiusMeters);
       if (!Number.isInteger(r) || r < 30 || r > 2000) {

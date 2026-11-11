@@ -10,9 +10,12 @@ const { isValidCoord } = require('../utils/geo');
 const { logEvent } = require('../utils/audit');
 const { sendAlertsForSubject } = require('./alertController');
 const { currentCode } = require('../utils/code');
+const { notifyClass } = require('../utils/push');
 
 // QR kitni der valid rahega (seconds)
 const QR_VALIDITY_SECONDS = 30;
+// Band hui class itni der tak dobara khul sakti hai (late aane wale students ke liye)
+const REOPEN_WINDOW_MS = 30 * 60 * 1000;
 
 // Naya rotating token banata hai. Is token ko QR me daalte hai
 const generateQrToken = (sessionId, qrSecret) =>
@@ -62,6 +65,15 @@ exports.startSession = async (req, res) => {
       ...(hasLocation ? { location: { lat, lng, accuracy } } : {}),
     });
 
+    // Class ke students ko phone par notification (piche chalta hai)
+    notifyClass(subject.department, subject.semester, {
+      title: subject.name + ' ki class shuru ho gayi',
+      body: 'Attendance lagao: QR scan karo ya 4 ank ka code daalo.',
+      url: '/student',
+      tag: 'class-' + session._id,
+      ttl: 300,
+    }).catch(() => {});
+
     res.status(201).json({
       session: {
         id: session._id,
@@ -73,6 +85,81 @@ exports.startSession = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+// POST /api/sessions/:id/reopen   body: { lat, lng, accuracy }  (location optional)
+// Class band ho gayi par kuch students late aaye: 30 minute ke andar dobara khol sakte ho
+exports.reopenSession = async (req, res) => {
+  try {
+    const session = await Session.findById(req.params.id);
+    if (!session) return res.status(404).json({ message: 'Session nahi mila' });
+
+    if (String(session.teacher) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'Ye session tumhara nahi hai' });
+    }
+    if (session.isActive) {
+      return res.status(400).json({ message: 'Ye class pehle se chalu hai' });
+    }
+    const endedAt = session.endTime ? session.endTime.getTime() : 0;
+    if (Date.now() - endedAt > REOPEN_WINDOW_MS) {
+      return res
+        .status(400)
+        .json({ message: 'Class ko band hue 30 minute se zyada ho gaye, ab dobara nahi khul sakti' });
+    }
+
+    const subject = await Subject.findById(session.subject);
+    if (!subject) return res.status(404).json({ message: 'Subject nahi mila' });
+
+    if (await Session.exists({ subject: session.subject, teacher: req.user._id, isActive: true })) {
+      return res
+        .status(400)
+        .json({ message: 'Is subject ki dusri class chalu hai. Pehle use band karo' });
+    }
+
+    // Teacher ki nayi location mil gayi to wahi, nahi to purani wali
+    const lat = typeof req.body.lat === 'number' ? req.body.lat : NaN;
+    const lng = typeof req.body.lng === 'number' ? req.body.lng : NaN;
+    const accuracy = typeof req.body.accuracy === 'number' ? req.body.accuracy : 0;
+    const hasNew = isValidCoord(lat, lng);
+    const hadOld = !!(session.location && typeof session.location.lat === 'number');
+    const settings = await getSettings();
+    if (settings.geoEnabled && !hasNew && !hadOld) {
+      return res.status(400).json({
+        message: 'Phone ki location ON karo aur allow karo. Students ki location isi se match hogi',
+      });
+    }
+
+    // Purane QR aur code band ho jaye isliye naya secret
+    const set = {
+      isActive: true,
+      qrSecret: crypto.randomBytes(32).toString('hex'),
+      ...(hasNew ? { location: { lat, lng, accuracy } } : {}),
+    };
+    const r = await Session.updateOne(
+      { _id: session._id, isActive: false },
+      { $set: set, $unset: { endTime: 1 }, $inc: { reopenCount: 1 } }
+    );
+    if (r.modifiedCount === 0) {
+      return res.status(400).json({ message: 'Ye class pehle se chalu hai' });
+    }
+
+    logEvent('session_reopen', req.user.name + ' reopened the class of ' + subject.name, { req });
+
+    notifyClass(subject.department, subject.semester, {
+      title: subject.name + ' ki attendance dobara khuli hai',
+      body: 'Late ho to abhi attendance laga lo.',
+      url: '/student',
+      tag: 'class-' + session._id,
+      ttl: 300,
+    }).catch(() => {});
+
+    res.json({
+      session: { id: session._id, subject: subject.name, isActive: true },
+      qrValiditySeconds: QR_VALIDITY_SECONDS,
+    });
+  } catch (err) {
+    res.status(400).json({ message: 'Session ID sahi nahi hai' });
   }
 };
 

@@ -50,6 +50,9 @@ app.use('/api/sessions', require('./routes/sessionRoutes'));
 app.use('/api/attendance', require('./routes/attendanceRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/security', require('./routes/securityRoutes'));
+app.use('/api/announcements', require('./routes/announcementRoutes'));
+app.use('/api/push', require('./routes/pushRoutes'));
+app.use('/api/bio', require('./routes/bioRoutes'));
 
 // Jo API exist nahi karti uska saaf jawab
 app.use('/api', (req, res) => {

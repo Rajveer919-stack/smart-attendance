@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import api from '../api/axios';
+import { markWithBio } from '../utils/bio';
 
 // Har device ki ek pakki ID. Ek device se ek session me ek hi attendance lagegi
 function getDeviceId() {
@@ -65,11 +65,11 @@ export default function ScanQR() {
     try {
       let pos = geoRef.current ? await geoRef.current : null;
       if (!pos) pos = await getPosition();
-      const { data } = await api.post('/attendance/mark', {
-        token,
-        deviceId: getDeviceId(),
-        ...(pos || {}),
-      });
+      const { data } = await markWithBio(
+        '/attendance/mark',
+        { token, deviceId: getDeviceId(), ...(pos || {}) },
+        () => setMessage('Fingerprint ya face se verify karo...')
+      );
       setStatus('success');
       setMessage(data.subject + ': ' + data.message);
     } catch (err) {
@@ -249,7 +249,7 @@ export default function ScanQR() {
         )}
 
         {status === 'sending' && (
-          <p className="text-slate-600 text-center">Attendance lag rahi hai...</p>
+          <p className="text-slate-600 text-center">{message || 'Attendance lag rahi hai...'}</p>
         )}
 
         {status === 'success' && (

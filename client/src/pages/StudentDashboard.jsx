@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import AppHeader from '../components/AppHeader';
+import StudentSettings from '../components/StudentSettings';
 import { getDeviceId, getPosition } from '../utils/device';
+import { markWithBio } from '../utils/bio';
 
 const RADIUS = 28;
 const CIRCLE = 2 * Math.PI * RADIUS;
@@ -45,6 +47,22 @@ function Ring({ percentage, size = 64 }) {
 
 const SOURCE_LABEL = { qr: 'QR se', code: 'Code se', manual: 'Teacher ne lagayi' };
 
+// Announcement kab tak dekhi gayi (is phone me yaad rehta hai)
+const readSeen = () => {
+  try {
+    return Number(localStorage.getItem('annSeen')) || 0;
+  } catch {
+    return 0;
+  }
+};
+const writeSeen = () => {
+  try {
+    localStorage.setItem('annSeen', String(Date.now()));
+  } catch {
+    // koi baat nahi
+  }
+};
+
 const timeText = (value) =>
   new Date(value).toLocaleString('en-IN', {
     day: '2-digit',
@@ -58,6 +76,9 @@ export default function StudentDashboard() {
   const [report, setReport] = useState([]);
   const [live, setLive] = useState([]);
   const [history, setHistory] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [showAllAnn, setShowAllAnn] = useState(false);
+  const seenAt = useRef(readSeen()).current;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [code, setCode] = useState('');
@@ -88,15 +109,32 @@ export default function StudentDashboard() {
     }
   }, []);
 
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      const { data } = await api.get('/announcements');
+      setAnnouncements(data.announcements);
+      writeSeen();
+    } catch {
+      // agli baar phir koshish hogi
+    }
+  }, []);
+
   useEffect(() => {
     loadReport();
     loadLive();
+    loadAnnouncements();
     // Chalti class har 10 second me dekho (sirf jab app saamne khula ho)
     const timer = setInterval(() => {
       if (document.visibilityState === 'visible') loadLive();
     }, 10000);
-    return () => clearInterval(timer);
-  }, [loadReport, loadLive]);
+    const annTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') loadAnnouncements();
+    }, 60000);
+    return () => {
+      clearInterval(timer);
+      clearInterval(annTimer);
+    };
+  }, [loadReport, loadLive, loadAnnouncements]);
 
   // "App install karo" ka button (Android Chrome)
   useEffect(() => {
@@ -136,11 +174,11 @@ export default function StudentDashboard() {
         });
         return;
       }
-      const { data } = await api.post('/attendance/mark-code', {
-        code,
-        deviceId: getDeviceId(),
-        ...pos,
-      });
+      const { data } = await markWithBio(
+        '/attendance/mark-code',
+        { code, deviceId: getDeviceId(), ...pos },
+        () => setCodeMsg({ type: '', text: 'Fingerprint ya face se verify karo...' })
+      );
       setCodeMsg({ type: 'ok', text: data.subject + ': ' + data.message });
       setCode('');
       loadLive();
@@ -162,6 +200,8 @@ export default function StudentDashboard() {
   const overallTone = tone(overall);
   const pending = live.filter((c) => !c.marked);
   const allDone = live.length > 0 && pending.length === 0;
+  const newAnnCount = announcements.filter((a) => new Date(a.createdAt).getTime() > seenAt).length;
+  const shownAnn = showAllAnn ? announcements : announcements.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -298,6 +338,38 @@ export default function StudentDashboard() {
           )}
         </section>
 
+        {announcements.length > 0 && (
+          <section className="bg-white rounded-2xl shadow p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-slate-800">Teacher ke announcements</h2>
+              {newAnnCount > 0 && (
+                <span className="text-xs font-semibold rounded-full px-3 py-1 bg-indigo-600 text-white">
+                  {newAnnCount + ' naye'}
+                </span>
+              )}
+            </div>
+            <ul className="space-y-2">
+              {shownAnn.map((a) => (
+                <li key={a.id} className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2">
+                  <p className="text-xs text-slate-500">
+                    {a.subject + ' - ' + a.teacher + ' - ' + timeText(a.createdAt)}
+                  </p>
+                  <p className="font-semibold text-slate-800">{a.title}</p>
+                  <p className="text-sm text-slate-700 whitespace-pre-line break-words">{a.message}</p>
+                </li>
+              ))}
+            </ul>
+            {announcements.length > 3 && (
+              <button
+                onClick={() => setShowAllAnn((v) => !v)}
+                className="text-sm text-indigo-600 font-medium"
+              >
+                {showAllAnn ? 'Kam dikhao' : 'Sab dikhao (' + announcements.length + ')'}
+              </button>
+            )}
+          </section>
+        )}
+
         {!loading && report.length > 0 && (
           <section className="grid gap-3 sm:grid-cols-[auto_1fr]">
             <div className="bg-white rounded-2xl shadow p-4 flex items-center gap-4">
@@ -411,6 +483,8 @@ export default function StudentDashboard() {
             ))}
           </ul>
         </section>
+
+        <StudentSettings />
       </main>
     </div>
   );
