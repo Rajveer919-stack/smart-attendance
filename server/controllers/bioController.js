@@ -4,6 +4,7 @@ const Credential = require('../models/Credential');
 const User = require('../models/User');
 const { getSettings } = require('../utils/settings');
 const { logEvent } = require('../utils/audit');
+const { siteHost } = require('../middleware/bio');
 const { b64u, fromB64u, verifyRegistration, verifyAuthentication } = require('../utils/webauthn');
 
 const CHALLENGE_MS = 2 * 60 * 1000;
@@ -29,26 +30,18 @@ function takeChallenge(challenge, userId, purpose) {
   return c;
 }
 
-// Site ka naam (rpId): jis address se student ne site kholi
-function siteHost(req) {
-  try {
-    if (req.headers.origin) return new URL(req.headers.origin).hostname;
-  } catch {
-    // neeche wala use hoga
-  }
-  return req.hostname;
-}
-
 const who = (u) => u.name + ' (roll ' + (u.rollNo || '-') + ')';
 
 // GET /api/bio/status   (student)
 exports.getStatus = async (req, res) => {
   try {
-    const [settings, count] = await Promise.all([
+    const host = siteHost(req);
+    const [settings, here, total] = await Promise.all([
       getSettings(),
+      Credential.countDocuments({ user: req.user._id, rpId: host }),
       Credential.countDocuments({ user: req.user._id }),
     ]);
-    res.json({ enrolled: count > 0, required: settings.bioRequired });
+    res.json({ enrolled: here > 0, otherSite: here === 0 && total > 0, required: settings.bioRequired });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -57,12 +50,15 @@ exports.getStatus = async (req, res) => {
 // POST /api/bio/register-options   (student)
 exports.registerOptions = async (req, res) => {
   try {
-    if ((await Credential.countDocuments({ user: req.user._id })) > 0) {
+    const rpId = siteHost(req);
+    if ((await Credential.countDocuments({ user: req.user._id, rpId })) > 0) {
       return res.status(400).json({
         message: 'Is account par pehle se lock laga hai. Naya phone ho to admin se reset karwao',
       });
     }
-    const rpId = siteHost(req);
+    if ((await Credential.countDocuments({ user: req.user._id })) >= 4) {
+      return res.status(400).json({ message: 'Bahut saare lock lag chuke hai. Admin se reset karwao' });
+    }
     const challenge = newChallenge(req.user._id, 'reg', { rpId });
     res.json({
       challenge,
@@ -89,17 +85,13 @@ exports.registerOptions = async (req, res) => {
   }
 };
 
-// POST /api/bio/register   body: { clientDataJSON, attestationObject, transports }   (student)
+// POST /api/bio/register   body: { challenge, clientDataJSON, attestationObject, transports }   (student)
 exports.register = async (req, res) => {
   try {
     const b = req.body || {};
     if (typeof b.clientDataJSON !== 'string' || typeof b.attestationObject !== 'string') {
       return res.status(400).json({ message: 'Lock ka data sahi nahi hai' });
     }
-    if ((await Credential.countDocuments({ user: req.user._id })) > 0) {
-      return res.status(400).json({ message: 'Is account par pehle se lock laga hai' });
-    }
-
     // clientDataJSON se challenge nikaal kar server ke yaad kiye challenge se milao
     let given;
     try {
@@ -109,6 +101,12 @@ exports.register = async (req, res) => {
     }
     const c = takeChallenge(given, req.user._id, 'reg');
     if (!c) return res.status(400).json({ message: 'Time khatam ho gaya. Dobara koshish karo' });
+    if (c.rpId !== siteHost(req)) {
+      return res.status(400).json({ message: 'Site ka address badal gaya. Dobara koshish karo' });
+    }
+    if ((await Credential.countDocuments({ user: req.user._id, rpId: c.rpId })) > 0) {
+      return res.status(400).json({ message: 'Is account par pehle se lock laga hai' });
+    }
 
     let reg;
     try {
@@ -149,12 +147,17 @@ exports.register = async (req, res) => {
 // POST /api/bio/auth-options   (student)
 exports.authOptions = async (req, res) => {
   try {
-    const creds = await Credential.find({ user: req.user._id }).lean();
-    if (creds.length === 0) return res.status(400).json({ message: 'Pehle fingerprint/face lock ON karo' });
+    const rpId = siteHost(req);
+    const creds = await Credential.find({ user: req.user._id, rpId }).lean();
+    if (creds.length === 0) {
+      return res.status(400).json({
+        message: 'Is site/app par lock ON nahi hai. Dashboard ki Settings me jaakar lock ON karo',
+      });
+    }
     const challenge = newChallenge(req.user._id, 'auth');
     res.json({
       challenge,
-      rpId: creds[0].rpId,
+      rpId,
       timeout: 60000,
       userVerification: 'required',
       allowCredentials: creds.map((c) => ({ type: 'public-key', id: c.credentialId, transports: c.transports })),

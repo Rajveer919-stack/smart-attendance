@@ -2,13 +2,26 @@ const jwt = require('jsonwebtoken');
 const Credential = require('../models/Credential');
 const { getSettings } = require('../utils/settings');
 
+// Site ka naam (rpId): jis address se student ne site/app kholi
+function siteHost(req) {
+  try {
+    if (req.headers.origin) return new URL(req.headers.origin).hostname;
+  } catch {
+    // neeche wala use hoga
+  }
+  return req.hostname;
+}
+exports.siteHost = siteHost;
+
 // Attendance lagane se pehle: jis student ne fingerprint/face lock ON kiya hai (ya admin ne sabke liye
-// zaroori kiya hai) uska taaza verify hona zaroori hai. Ye request ko kuch badalta nahi, sirf rokta hai.
+// zaroori kiya hai) uska taaza verify hona zaroori hai. Lock usi site/app ke address par gina jata hai
+// jahan se attendance lag rahi hai (computer par test karke bana hua lock asli site par nahi chalta).
+// Ye request ko kuch badalta nahi, sirf rokta hai.
 exports.requireBio = async (req, res, next) => {
   try {
     const [settings, count] = await Promise.all([
       getSettings(),
-      Credential.countDocuments({ user: req.user._id }),
+      Credential.countDocuments({ user: req.user._id, rpId: siteHost(req) }),
     ]);
 
     if (count === 0) {
