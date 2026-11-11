@@ -59,11 +59,23 @@ function keepStorage() {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Server ki cookie me bhi login saved rehta hai (phone app ka data mita de tab ke liye).
+// Ye "sa_has" sirf nishan hai ki cookie hai; asli token JavaScript ko dikhta hi nahi.
+function hasCookieLogin() {
+  try {
+    return document.cookie.split(';').some((c) => c.trim() === 'sa_has=1');
+  } catch {
+    return false;
+  }
+}
+
 export function AuthProvider({ children }) {
   const cached = useRef(readCachedUser()).current;
   const [user, setUser] = useState(cached);
   // Pehle se login ka nishan hai to turant dashboard dikhao, piche se check hota rahega
-  const [loading, setLoading] = useState(() => !!readStore(TOKEN_KEY) && !cached);
+  const [loading, setLoading] = useState(
+    () => (!!readStore(TOKEN_KEY) && !cached) || (!readStore(TOKEN_KEY) && hasCookieLogin())
+  );
 
   const clearLogin = useCallback(() => {
     writeStore(TOKEN_KEY, null);
@@ -74,6 +86,8 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     clearLogin();
+    // Cookie bhi hatao, warna app dobara khulte hi phir login ho jayega
+    api.post('/auth/logout').catch(() => {});
   }, [clearLogin]);
 
   const login = useCallback(async (email, password) => {
@@ -105,14 +119,45 @@ export function AuthProvider({ children }) {
   // App khulte hi: saved login se server se naya haal lo
   useEffect(() => {
     const token = readStore(TOKEN_KEY);
+    let stopped = false;
+
     if (!token) {
-      setLoading(false);
-      return undefined;
+      if (!hasCookieLogin()) {
+        setLoading(false);
+        return undefined;
+      }
+      // Phone ne saved data mita diya, par cookie bachi hai: usse login wapas lo
+      (async () => {
+        for (let attempt = 0; attempt < 8 && !stopped; attempt += 1) {
+          try {
+            const { data } = await api.post('/auth/restore');
+            if (stopped) return;
+            writeStore(TOKEN_KEY, data.token);
+            writeStore(USER_KEY, JSON.stringify(data.user));
+            setAuthHeader(data.token);
+            setUser(data.user);
+            setLoading(false);
+            keepStorage();
+            return;
+          } catch (err) {
+            const status = err.response && err.response.status;
+            if (status === 401) {
+              if (!stopped) setLoading(false);
+              return;
+            }
+            await wait(Math.min(2000 * (attempt + 1), 8000));
+          }
+        }
+        if (!stopped) setLoading(false);
+      })();
+      return () => {
+        stopped = true;
+      };
     }
+
     setAuthHeader(token);
     keepStorage();
 
-    let stopped = false;
     (async () => {
       // Render ka server so raha ho to jagne me der lagti hai, isliye kai baar koshish
       for (let attempt = 0; attempt < 8 && !stopped; attempt += 1) {
