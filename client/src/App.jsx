@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import LanguageGate from './components/LanguageGate';
+import Splash from './components/Splash';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -19,9 +20,24 @@ import ScanQR from './pages/ScanQR';
 // Login hona zaroori hai, aur role bhi sahi hona chahiye
 function ProtectedRoute({ role, loginPath = '/login', children }) {
   const { user, loading } = useAuth();
-  if (loading) return <p className="p-6">Loading...</p>;
+  if (loading) return <Splash />;
   if (!user) return <Navigate to={loginPath} replace />;
   if (role && user.role !== role) return <Navigate to={'/' + user.role} replace />;
+  return children;
+}
+
+// App kholte hi "/" par aate hai: login hai to seedha apne dashboard par, nahi to login par
+function RootRedirect() {
+  const { user, loading } = useAuth();
+  if (loading) return <Splash />;
+  return <Navigate to={user ? '/' + user.role : '/login'} replace />;
+}
+
+// Login / Register / Forgot page: agar login pehle se hai to dobara login dikhane ki zarurat nahi
+function GuestRoute({ onlyRole, children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <Splash />;
+  if (user && (!onlyRole || user.role === onlyRole)) return <Navigate to={'/' + user.role} replace />;
   return children;
 }
 
@@ -29,10 +45,18 @@ export default function App() {
   return (
     <LanguageGate>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+        <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+        <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
+        <Route
+          path="/admin/login"
+          element={
+            <GuestRoute onlyRole="admin">
+              <AdminLogin />
+            </GuestRoute>
+          }
+        />
 
         <Route
           path="/student"
@@ -117,7 +141,7 @@ export default function App() {
           }
         />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<RootRedirect />} />
       </Routes>
     </LanguageGate>
   );
