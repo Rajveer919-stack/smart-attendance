@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const { issueOtp, checkOtp } = require('../utils/otp');
 const { sendOtpMail } = require('../utils/mailer');
 const { logEvent } = require('../utils/audit');
+const { checkEmail } = require('../utils/emailCheck');
 
 // 5 galat password ke baad account 15 minute ke liye band
 const MAX_FAILS = 5;
@@ -16,7 +17,6 @@ const {
   MAX_ROLL,
   parseRoll,
   parseSemester,
-  EMAIL_RE,
 } = require('../config/classes');
 
 const signToken = (id) =>
@@ -76,7 +76,8 @@ async function validateStudent(body) {
   const rollNo = parseRoll(body.rollNo);
 
   if (name.length < 2) return { error: 'Naam daalo (kam se kam 2 akshar)' };
-  if (!EMAIL_RE.test(email)) return { error: 'Sahi email daalo' };
+  const mail = await checkEmail(email);
+  if (!mail.ok) return { error: mail.message };
   if (password.length < 6) return { error: 'Password kam se kam 6 akshar ka ho' };
   if (!DEPARTMENTS.includes(department)) return { error: 'Department list me se chuno' };
   if (!semester) return { error: 'Semester 1 se 8 ke beech chuno' };
@@ -210,7 +211,8 @@ exports.forgotPassword = async (req, res) => {
   const generic = { message: 'Agar ye email registered hai to OTP bhej diya gaya hai' };
   try {
     const email = cleanEmail(req.body.email);
-    if (!EMAIL_RE.test(email)) return res.status(400).json({ message: 'Sahi email daalo' });
+    const mail = await checkEmail(email);
+    if (!mail.ok) return res.status(400).json({ message: mail.message });
 
     const user = await User.findOne({ email }).select('_id');
     if (user) {
@@ -273,7 +275,8 @@ exports.createUser = async (req, res) => {
     if (!['teacher', 'admin'].includes(role)) {
       return res.status(400).json({ message: 'Yaha sirf teacher ya admin ban sakta hai' });
     }
-    if (!EMAIL_RE.test(email)) return res.status(400).json({ message: 'Sahi email daalo' });
+    const mail = await checkEmail(email);
+    if (!mail.ok) return res.status(400).json({ message: mail.message });
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password kam se kam 6 akshar ka ho' });
     }
@@ -309,7 +312,8 @@ exports.updateAccount = async (req, res) => {
 
     if (newEmail && cleanEmail(newEmail) !== user.email) {
       const email = cleanEmail(newEmail);
-      if (!EMAIL_RE.test(email)) return res.status(400).json({ message: 'Sahi email daalo' });
+      const mail = await checkEmail(email);
+      if (!mail.ok) return res.status(400).json({ message: mail.message });
       if (await User.exists({ email })) {
         return res.status(400).json({ message: 'Ye email pehle se kisi aur ka hai' });
       }
