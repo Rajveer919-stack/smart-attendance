@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import ThemeToggle from './ThemeToggle';
 import '../glass.css';
+import '../mock.css';
 
 // Chhote line-icons (bahar se koi package nahi chahiye)
 const ICONS = {
@@ -23,6 +23,9 @@ const ICONS = {
   calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
   alert: 'M12 3l10 18H2zM12 10v5M12 18v.01',
   check: 'M5 12l4 4 10-10',
+  cap: 'M12 4 2 9l10 5 10-5-10-5zM6 11.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-4.5M22 9v6',
+  bell: 'M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7zM10 20a2 2 0 0 0 4 0',
+  search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
 };
 
 export function Icon({ name, className = 'h-5 w-5' }) {
@@ -56,14 +59,44 @@ export function Stat({ icon = 'chart', tone = 'indigo', label, value, hint }) {
   );
 }
 
-const ROLE_TEXT = { admin: 'Admin', teacher: 'Teacher', student: 'Student' };
+// Upar ka bada "Welcome Back" banner (cartoon ke saath). role: admin | teacher | student
+export function Hero({ role, hi = 'Welcome Back,', name, line, quote, children }) {
+  return (
+    <section className={'mk-hero mk-hero-' + role}>
+      <img className="mk-hero-img" src={'/hero-' + role + '.webp'} alt="" width="300" height="180" />
+      <div className="mk-hero-txt">
+        <h1>
+          {hi} <span>{name}</span>
+        </h1>
+        {line ? <p className="mk-hero-line">{line}</p> : null}
+        {children}
+        {quote ? <p className="mk-hero-quote">{quote}</p> : null}
+      </div>
+    </section>
+  );
+}
+
+const ROLE_TEXT = { admin: 'Super Admin', teacher: 'Teacher', student: 'Student' };
 
 // Teeno dashboard (Admin, Teacher, Student) ka ek jaisa dhancha:
-// laptop par side menu, phone par neeche tab bar.
-// nav: [{ key, label, icon, to | onClick }]   active: jis item ki key abhi khuli hai
-export default function DashboardShell({ label, nav = [], active, children }) {
+// laptop par side menu + search, phone par user card aur neeche tab bar.
+// nav: [{ key, label, icon, to | onClick, center }]   active: jis item ki key abhi khuli hai
+// bellTo: bell dabane par kahan jaye (na do to bell nahi dikhegi)
+export default function DashboardShell({ label, nav = [], active, bellTo, children }) {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const [q, setQ] = useState('');
+
+  // Ye dashboard hamesha dark-violet dikhta hai. Chhodte hi purani theme wapas
+  useEffect(() => {
+    const root = document.documentElement;
+    const had = root.classList.contains('dark');
+    root.classList.add('dark');
+    return () => {
+      if (!had) root.classList.remove('dark');
+    };
+  }, []);
 
   const today = useMemo(
     () => new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }),
@@ -72,16 +105,35 @@ export default function DashboardShell({ label, nav = [], active, children }) {
 
   const isOn = (n) => (n.key ? n.key === active : !!n.to && n.to === pathname);
 
+  const go = (n) => {
+    if (n.to) navigate(n.to);
+    else if (n.onClick) n.onClick();
+  };
+
+  // Search: menu ka naam likho (jaise "students") aur Enter dabao
+  const search = (e) => {
+    e.preventDefault();
+    const t = q.trim().toLowerCase();
+    if (!t) return;
+    const hit = nav.find((n) => n.label.toLowerCase().includes(t));
+    if (hit) {
+      go(hit);
+      setQ('');
+    }
+  };
+
   const renderItem = (n, className) => {
     const on = isOn(n);
     const props = {
-      className: className + (on ? ' is-on' : ''),
+      className: className + (on ? ' is-on' : '') + (className === 'dash-tab' && n.center ? ' is-center' : ''),
       'aria-current': on ? 'page' : undefined,
     };
     const inner = (
       <>
-        <Icon name={n.icon} className={className === 'dash-tab' ? 'h-[22px] w-[22px]' : 'h-5 w-5'} />
-        <span>{n.label}</span>
+        <span className="dash-ico">
+          <Icon name={n.icon} className={className === 'dash-tab' ? 'h-[22px] w-[22px]' : 'h-5 w-5'} />
+        </span>
+        <span className="dash-lbl">{n.label}</span>
       </>
     );
     if (n.to) {
@@ -100,66 +152,85 @@ export default function DashboardShell({ label, nav = [], active, children }) {
 
   const name = user ? user.name : '';
   const initial = name ? name.trim().charAt(0).toUpperCase() : '?';
+  const roleText = ROLE_TEXT[user && user.role] || '';
+
+  const brand = (
+    <div className="dash-brand">
+      <div className="dash-logo">
+        <Icon name="cap" className="h-6 w-6" />
+      </div>
+      <div className="min-w-0">
+        <b>Smart Attendance</b>
+        <small>System</small>
+      </div>
+    </div>
+  );
+
+  const bell = bellTo ? (
+    <Link to={bellTo} className="dash-icon-btn" aria-label="Notifications" title="Notifications">
+      <Icon name="bell" />
+    </Link>
+  ) : null;
 
   return (
-    <div className="dash-shell">
+    <div className="dash-shell mk">
       {/* Laptop: side menu */}
       <aside className="dash-side" aria-label="Menu">
-        <div className="dash-brand">
-          <div className="dash-logo">
-            <Icon name="scan" className="h-6 w-6" />
-          </div>
-          <div className="min-w-0">
-            <b>Smart Attendance</b>
-            <small>{label}</small>
-          </div>
-        </div>
-
-        <nav className="dash-nav">
-          <p className="dash-nav-title">Menu</p>
-          {nav.map((n) => renderItem(n, 'dash-link'))}
-        </nav>
-
-        <div className="dash-user">
-          <div className="dash-avatar">{initial}</div>
-          <p>
-            <b>{name}</b>
-            <small>{ROLE_TEXT[user && user.role] || ''}</small>
-          </p>
-        </div>
+        {brand}
+        <nav className="dash-nav">{nav.map((n) => renderItem(n, 'dash-link'))}</nav>
         <button type="button" onClick={logout} className="dash-link dash-logout">
-          <Icon name="logout" />
-          <span>Logout</span>
+          <span className="dash-ico">
+            <Icon name="logout" />
+          </span>
+          <span className="dash-lbl">Logout</span>
         </button>
       </aside>
 
       <div className="dash-main">
         <header className="dash-top">
           {/* Phone: logo + naam */}
-          <div className="dash-brand">
-            <div className="dash-logo">
-              <Icon name="scan" className="h-6 w-6" />
-            </div>
-            <div className="min-w-0">
-              <b>Smart Attendance</b>
-              <small>{label}</small>
-            </div>
-          </div>
-          {/* Laptop: page ka naam + aaj ki date */}
-          <div className="dash-page">
-            <b>{label}</b>
-            <small className="dash-date">{today}</small>
-          </div>
+          {brand}
+
+          {/* Laptop: search */}
+          <form className="dash-search" onSubmit={search} role="search">
+            <Icon name="search" className="h-[18px] w-[18px]" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Menu search karo (jaise students)"
+              aria-label="Search menu"
+            />
+          </form>
 
           <div className="dash-top-right">
-            <ThemeToggle className="dash-icon-btn" />
+            {bell}
             <button type="button" onClick={logout} className="dash-icon-btn dash-logout-mobile" aria-label="Logout" title="Logout">
               <Icon name="logout" />
             </button>
+            {/* Laptop: user chip */}
+            <div className="dash-chipuser">
+              <div className="dash-avatar">{initial}</div>
+              <p>
+                <b>{name}</b>
+                <small>{roleText}</small>
+              </p>
+            </div>
           </div>
         </header>
 
-        <main className="dash-content">{children}</main>
+        {/* Phone: user card */}
+        <div className="dash-usercard">
+          <div className="dash-avatar">{initial}</div>
+          <p>
+            <b>{name}</b>
+            <small>{roleText}</small>
+          </p>
+          <span className="dash-date">{today}</span>
+        </div>
+
+        <main className="dash-content" aria-label={label}>
+          {children}
+        </main>
       </div>
 
       {/* Phone: neeche ka tab bar */}

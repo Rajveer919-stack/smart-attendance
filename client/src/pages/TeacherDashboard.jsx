@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import DashboardShell, { Stat } from '../components/DashboardShell';
+import DashboardShell, { Hero, Stat } from '../components/DashboardShell';
 
 // Teacher ke phone ki location. Student isi ke paas hone chahiye (admin ne location check ON kiya ho to)
 function getPosition() {
@@ -95,21 +95,18 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <DashboardShell label="Teacher Dashboard" nav={TEACHER_NAV} active="home">
+    <DashboardShell label="Teacher Dashboard" nav={TEACHER_NAV} active="home" bellTo="/teacher/announcements">
       <div className="space-y-5">
-        <section className="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white p-5 shadow-lg">
-          <p className="text-sm text-white/80">Namaste,</p>
-          <h1 className="text-2xl sm:text-3xl font-extrabold">{user.name}</h1>
-          <p className="mt-2 text-sm text-white/80">
-            {subjects.length + ' subject tumhare naam par hai. Class shuru karo aur QR dikhao.'}
-          </p>
-          <Link
-            to="/teacher/announcements"
-            className="mt-3 inline-block rounded-lg bg-white/20 hover:bg-white/30 ring-1 ring-white/30 text-sm font-semibold px-4 py-2"
-          >
+                <Hero
+          role="teacher"
+          name={user.name}
+          line="Teach · Guide · Inspire"
+          quote={subjects.length + ' subject tumhare naam par hai. Class shuru karo aur QR dikhao.'}
+        >
+          <Link to="/teacher/announcements" className="mk-hero-link">
             Class ko announcement bhejo
           </Link>
-        </section>
+        </Hero>
 
         <div className="grid grid-cols-3 gap-3">
           <Stat icon="book" tone="indigo" label="Subjects" value={subjects.length} />

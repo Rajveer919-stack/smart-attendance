@@ -1,0 +1,179 @@
+/* Mockup jaisa dark-violet dashboard. glass.css ke baad load hota hai. */
+@media screen {
+  html.dark .dash-shell.mk {
+    --g-card: rgba(255, 255, 255, 0.075);
+    --g-card-strong: rgba(34, 20, 96, 0.96);
+    --g-line: rgba(255, 255, 255, 0.14);
+    --g-shadow: 0 16px 34px -18px rgba(8, 3, 40, 0.85);
+    --g-text: #f1edff;
+    --g-muted: #b3a8e6;
+    background: #12093a;
+  }
+  html.dark .dash-shell.mk::before {
+    background:
+      radial-gradient(46rem 30rem at 0% 0%, rgba(124, 77, 255, 0.45), transparent 62%),
+      radial-gradient(40rem 30rem at 100% 10%, rgba(56, 120, 255, 0.26), transparent 62%),
+      radial-gradient(44rem 28rem at 60% 110%, rgba(168, 85, 247, 0.34), transparent 62%),
+      linear-gradient(180deg, #1c0f58 0%, #2a1780 55%, #1a0e4e 100%);
+  }
+
+  /* ---------- Brand ---------- */
+  .mk .dash-logo { background: linear-gradient(135deg, #7c4dff, #4a1fd0); box-shadow: 0 10px 22px -8px rgba(124, 77, 255, 0.85); }
+  .mk .dash-brand b { color: #fff; font-size: 15px; }
+  .mk .dash-brand small { color: #c9bdff; font-size: 13px; font-weight: 600; }
+
+  /* ---------- Side menu ---------- */
+  .mk .dash-side {
+    background: linear-gradient(180deg, rgba(40, 22, 120, 0.92), rgba(24, 12, 74, 0.94));
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 30px 60px -24px rgba(5, 0, 40, 0.9);
+    border-radius: 26px;
+  }
+  .mk .dash-link { color: #e6e0ff; font-weight: 600; }
+  .mk .dash-link .dash-ico { display: flex; }
+  .mk .dash-link:hover { background: rgba(255, 255, 255, 0.08); }
+  .mk .dash-link.is-on {
+    color: #fff;
+    background: linear-gradient(135deg, #7c4dff, #5a2be8);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22), 0 12px 26px -10px rgba(124, 77, 255, 0.95);
+  }
+  .mk .dash-logout { color: #ffb4c0; background: rgba(255, 255, 255, 0.05); }
+  .mk .dash-logout:hover { background: rgba(255, 90, 120, 0.18); }
+
+  /* ---------- Top bar ---------- */
+  .mk .dash-search { display: none; }
+  .mk .dash-chipuser { display: none; }
+  .mk .dash-icon-btn { background: rgba(255, 255, 255, 0.1); color: #fff; position: relative; }
+  .mk .dash-usercard {
+    max-width: 74rem;
+    margin: 0 auto 10px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .mk .dash-usercard > .dash-avatar,
+  .mk .dash-chipuser .dash-avatar {
+    height: 46px;
+    width: 46px;
+    background: linear-gradient(135deg, #ffb86b, #ff6b9a);
+    color: #2a1070;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55);
+    font-size: 18px;
+  }
+  .mk .dash-usercard p,
+  .mk .dash-chipuser p { margin: 0; min-width: 0; }
+  .mk .dash-usercard b,
+  .mk .dash-chipuser b { display: block; color: #fff; font-size: 16px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mk .dash-usercard small,
+  .mk .dash-chipuser small { display: block; color: var(--g-muted); font-size: 12.5px; }
+  .mk .dash-usercard .dash-date { display: block; margin-left: auto; font-size: 12px; color: var(--g-muted); text-align: right; }
+
+  /* ---------- Phone tab bar (beech me ubhra hua button) ---------- */
+  .mk .dash-tabs {
+    background: rgba(30, 16, 92, 0.92);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 -10px 40px -12px rgba(5, 0, 40, 0.8);
+    border-radius: 26px;
+    align-items: flex-end;
+  }
+  .mk .dash-tab { color: #bdb2ef; }
+  .mk .dash-tab.is-on { background: transparent; box-shadow: none; color: #fff; }
+  .mk .dash-tab.is-on .dash-ico { color: #c9b5ff; }
+  .mk .dash-tab .dash-ico { display: flex; }
+  .mk .dash-tab.is-center { margin-top: -26px; }
+  .mk .dash-tab.is-center .dash-ico {
+    height: 58px;
+    width: 58px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: radial-gradient(circle at 30% 25%, #9a6bff, #4a1fd0);
+    box-shadow: 0 0 0 5px rgba(30, 16, 92, 0.95), 0 14px 28px -8px rgba(124, 77, 255, 0.95);
+  }
+  .mk .dash-tab.is-center.is-on { background: transparent; }
+
+  /* ---------- Hero banner ---------- */
+  .mk-hero {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+    min-height: 150px;
+    border-radius: 26px;
+    background:
+      radial-gradient(24rem 12rem at 90% 0%, rgba(120, 160, 255, 0.35), transparent 70%),
+      linear-gradient(120deg, rgba(104, 62, 235, 0.55), rgba(70, 36, 190, 0.5));
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 22px 44px -22px rgba(8, 3, 50, 0.9);
+    animation: dash-in 0.4s ease both;
+  }
+  .mk-hero-img {
+    flex: none;
+    width: 42%;
+    max-width: 300px;
+    height: auto;
+    object-fit: cover;
+    object-position: 50% 20%;
+    -webkit-mask-image: linear-gradient(90deg, #000 62%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 62%, transparent 100%);
+  }
+  .mk-hero-admin { flex-direction: row-reverse; }
+  .mk-hero-admin .mk-hero-img {
+    width: 48%;
+    max-width: 340px;
+    -webkit-mask-image: linear-gradient(270deg, #000 62%, transparent 100%);
+    mask-image: linear-gradient(270deg, #000 62%, transparent 100%);
+  }
+  .mk-hero-txt { position: relative; flex: 1; min-width: 0; padding: 16px 16px 16px 6px; display: flex; flex-direction: column; justify-content: center; }
+  .mk-hero-admin .mk-hero-txt { padding: 16px 4px 16px 18px; }
+  .mk-hero h1 { margin: 0; font-size: 22px; line-height: 1.15; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+  .mk-hero h1 span { color: #ffd37a; }
+  .mk-hero-line { margin: 6px 0 0; font-size: 12.5px; font-weight: 600; color: #e1d9ff; }
+  .mk-hero-quote { margin: 8px 0 0; font-size: 11.5px; font-style: italic; color: #cfc4ff; }
+  .mk-hero-chips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 11.5px; }
+  .mk-hero-chips span { border-radius: 999px; padding: 3px 10px; background: rgba(255, 255, 255, 0.16); color: #fff; }
+  .mk-hero-link { margin-top: 10px; align-self: flex-start; border-radius: 999px; padding: 7px 14px; font-size: 12.5px; font-weight: 700; color: #fff; text-decoration: none; background: linear-gradient(135deg, #8d5cff, #5a2be8); box-shadow: 0 10px 20px -10px rgba(124, 77, 255, 0.95); }
+
+  /* ---------- Cards ---------- */
+  .mk .dash-stat { border-radius: 22px; background: linear-gradient(160deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05)); }
+  .mk .dash-stat-value { color: #fff; }
+  .mk .dash-chip-indigo { color: #c9d1ff; background: rgba(99, 102, 241, 0.35); }
+  .mk .dash-chip-violet { color: #e2d4ff; background: rgba(168, 85, 247, 0.38); }
+  .mk .dash-chip-emerald { color: #a7f3d0; background: rgba(16, 185, 129, 0.3); }
+  .mk .dash-chip-amber { color: #fde68a; background: rgba(245, 158, 11, 0.3); }
+  .mk .dash-chip-sky { color: #bae6fd; background: rgba(14, 165, 233, 0.32); }
+  .mk .dash-chip-rose { color: #fecdd3; background: rgba(244, 63, 94, 0.3); }
+  .mk .bg-white { border-radius: 22px; }
+
+  /* ---------- Laptop ---------- */
+  @media (min-width: 1024px) {
+    .mk .dash-side { width: 232px; }
+    .mk .dash-main { margin-left: 264px; }
+    .mk .dash-top .dash-brand { display: none; }
+    .mk .dash-top { justify-content: space-between; padding-top: 20px; padding-bottom: 12px; }
+    .mk .dash-search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      max-width: 520px;
+      height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      color: #cfc6ff;
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16);
+    }
+    .mk .dash-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent !important; color: #fff; font-size: 14.5px; border-radius: 0; }
+    .mk .dash-search input::placeholder { color: #b3a8e6; }
+    .mk .dash-chipuser { display: flex; align-items: center; gap: 10px; padding: 4px 14px 4px 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14); }
+    .mk .dash-usercard { display: none; }
+    .mk-hero { min-height: 190px; }
+    .mk-hero h1 { font-size: 30px; }
+    .mk-hero-line { font-size: 15px; }
+    .mk-hero-quote { font-size: 13px; }
+    .mk-hero-txt { padding: 22px 26px 22px 10px; }
+    .mk-hero-admin .mk-hero-txt { padding: 22px 8px 22px 30px; }
+    .mk-hero-img { width: 36%; }
+    .mk-hero-admin .mk-hero-img { width: 44%; }
+  }
+}

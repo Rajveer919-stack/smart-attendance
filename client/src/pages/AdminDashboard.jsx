@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import DashboardShell, { Stat } from '../components/DashboardShell';
+import DashboardShell, { Hero, Stat } from '../components/DashboardShell';
 import AdminCharts from '../components/AdminCharts';
 import AdminSecurity from '../components/AdminSecurity';
 
@@ -220,6 +220,7 @@ export default function AdminDashboard() {
 
         {tab === 'overview' && (
           <div className="space-y-4">
+         <Hero role="admin" name={user.name} line="Manage · Monitor · Grow" quote="Sab kuch ek jagah se sambhalo." />
             <div className="grid grid-cols-3 gap-3">
               <Stat icon="teacher" tone="violet" label="Teachers" value={teachers.length} />
               <Stat icon="book" tone="sky" label="Subjects" value={subjects.length} />

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import DashboardShell, { Stat } from '../components/DashboardShell';
+import DashboardShell, { Hero, Stat } from '../components/DashboardShell';
 import StudentSettings from '../components/StudentSettings';
 import { getDeviceId, getPosition } from '../utils/device';
 import { markWithBio } from '../utils/bio';
@@ -49,7 +49,7 @@ function Ring({ percentage, size = 64 }) {
 const STUDENT_NAV = [
   { key: 'home', label: 'Home', icon: 'home' },
   { key: 'subjects', label: 'Subjects', icon: 'book' },
-  { key: 'scan', label: 'Scan', icon: 'scan', to: '/student/scan' },
+   { key: 'scan', label: 'Scan', icon: 'scan', to: '/student/scan', center: true },
   { key: 'history', label: 'History', icon: 'clock' },
   { key: 'settings', label: 'Settings', icon: 'sliders' },
 ];
@@ -224,15 +224,13 @@ export default function StudentDashboard() {
       <div className="space-y-5">
         {view === 'home' && (
           <>
-            <section className="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white p-5 shadow-lg">
-              <p className="text-sm text-white/80">Namaste,</p>
-              <h1 className="text-2xl sm:text-3xl font-extrabold">{user.name}</h1>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs sm:text-sm">
-                <span className="rounded-full bg-white/20 px-3 py-1">{'Roll ' + (user.rollNo || '-')}</span>
-                <span className="rounded-full bg-white/20 px-3 py-1">{user.department}</span>
-                <span className="rounded-full bg-white/20 px-3 py-1">{'Semester ' + user.semester}</span>
+                        <Hero role="student" name={user.name} line="Dream Big · Study Hard · Achieve More" quote="Success starts with regular attendance.">
+              <div className="mk-hero-chips">
+                <span>{'Roll ' + (user.rollNo || '-')}</span>
+                <span>{user.department}</span>
+                <span>{'Semester ' + user.semester}</span>
               </div>
-            </section>
+            </Hero>
 
             {installEvent && (
               <button
