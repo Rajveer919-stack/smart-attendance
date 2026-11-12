@@ -86,7 +86,7 @@ export default function App() {
         <Route
           path="/teacher"
           element={
-            <ProtectedRoute role="teacher">
+            <ProtectedRoute role="teacher" loginPath="/login?role=teacher">
               <TeacherDashboard />
             </ProtectedRoute>
           }
@@ -94,7 +94,7 @@ export default function App() {
         <Route
           path="/teacher/session/:id"
           element={
-            <ProtectedRoute role="teacher">
+            <ProtectedRoute role="teacher" loginPath="/login?role=teacher">
               <SessionQR />
             </ProtectedRoute>
           }
@@ -102,7 +102,7 @@ export default function App() {
         <Route
           path="/teacher/session/:id/attendance"
           element={
-            <ProtectedRoute role="teacher">
+            <ProtectedRoute role="teacher" loginPath="/login?role=teacher">
               <SessionEdit />
             </ProtectedRoute>
           }
@@ -110,7 +110,7 @@ export default function App() {
         <Route
           path="/teacher/students"
           element={
-            <ProtectedRoute role="teacher">
+            <ProtectedRoute role="teacher" loginPath="/login?role=teacher">
               <TeacherStudents />
             </ProtectedRoute>
           }
@@ -118,7 +118,7 @@ export default function App() {
         <Route
           path="/teacher/announcements"
           element={
-            <ProtectedRoute role="teacher">
+            <ProtectedRoute role="teacher" loginPath="/login?role=teacher">
               <TeacherAnnouncements />
             </ProtectedRoute>
           }
@@ -126,7 +126,7 @@ export default function App() {
         <Route
           path="/teacher/report/:id"
           element={
-            <ProtectedRoute role="teacher">
+            <ProtectedRoute role="teacher" loginPath="/login?role=teacher">
               <SubjectReport />
             </ProtectedRoute>
           }
