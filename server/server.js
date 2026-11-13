@@ -1,6 +1,8 @@
 require('dotenv').config();
 const path = require('path');
 const express = require('express');
+const compression = require('compression');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const { securityHeaders, sanitize, apiLimiter, checkEnv } = require('./middleware/security');
@@ -12,6 +14,38 @@ const isProd = process.env.NODE_ENV === 'production';
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 
 checkEnv();
+
+// Health check: UptimeRobot / Render yahi dekhte hain. Database ko chhoota nahi, isliye bahut halka hai.
+// Sabse upar rakha hai, taaki rate limit ya baaki kaam iska raasta na roke.
+app.get('/health', (req, res) => {
+  const dbOk = mongoose.connection.readyState === 1;
+  res.status(dbOk ? 200 : 503).json({ ok: dbOk, db: dbOk ? 'up' : 'down', uptime: Math.round(process.uptime()) });
+});
+
+// Overload se bachaav: ek sath bahut zyada kaam chal raha ho to naye requests ko thodi der rukne ko bolo
+// (poora server girne se behtar hai). Limit Render ke env MAX_INFLIGHT se badal sakte ho.
+const MAX_INFLIGHT = Number(process.env.MAX_INFLIGHT) || 250;
+let inflight = 0;
+app.use((req, res, next) => {
+  if (inflight >= MAX_INFLIGHT) {
+    res.setHeader('Retry-After', '3');
+    return res.status(503).json({ message: 'Server par abhi bahut load hai. 3-4 second baad dobara try karo' });
+  }
+  inflight += 1;
+  let done = false;
+  const finish = () => {
+    if (!done) {
+      done = true;
+      inflight -= 1;
+    }
+  };
+  res.on('finish', finish);
+  res.on('close', finish);
+  next();
+});
+
+// Jawab ko chhota (gzip) karke bhejo: kam data, kam load, tez app
+app.use(compression());
 
 // Security headers sabse pehle (website aur API dono ke jawab par lagte hai)
 app.use(securityHeaders);
@@ -81,6 +115,28 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Koi andekha error aaye to poora server na girey (sirf likh do)
+process.on('unhandledRejection', (e) => console.error('unhandledRejection:', e));
+process.on('uncaughtException', (e) => console.error('uncaughtException:', e));
+
 connectDB().then(() => {
-  app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+  const server = app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+  // Render ka proxy 60 sec tak connection rakhta hai, isliye hum usse zyada rakhte hain (warna random 502 aate hain)
+  server.keepAliveTimeout = 65 * 1000;
+  server.headersTimeout = 66 * 1000;
+
+  // Render naya version laga raha ho (SIGTERM) to chalte kaam pure karke band ho, beech me na kate
+  let closing = false;
+  const shutdown = (sig) => {
+    if (closing) return;
+    closing = true;
+    console.log(sig + ' mila, band ho raha hoon...');
+    server.close(() => {
+      mongoose.connection.close(false).finally(() => process.exit(0));
+    });
+    setTimeout(() => process.exit(0), 10000).unref();
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 });

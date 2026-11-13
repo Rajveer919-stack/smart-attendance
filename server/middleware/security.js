@@ -1,5 +1,6 @@
 // Website ko hack hone se bachane ke liye: headers, gande data ki safai, aur zyada requests par roak.
-// Koi extra package nahi chahiye.
+
+const jwt = require('jsonwebtoken');
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -88,8 +89,31 @@ function limiter({ windowMs, max, message, keyFn }) {
   };
 }
 
-// Poore /api par: ek IP se 5 minute me 1500 tak (college WiFi par sab ka IP ek hota hai, isliye zyada rakha)
-const apiLimiter = limiter({ windowMs: 5 * 60 * 1000, max: 1500 });
+// Login kiye user ko uske apne naam se gino (token sahi ho tabhi), baaki sab ko IP se.
+// Isse college WiFi par poori class ek IP se aaye to bhi kisi ek ko dusre ki wajah se roka nahi jata.
+function userKey(req) {
+  const h = req.headers.authorization;
+  if (h && h.startsWith('Bearer ')) {
+    try {
+      const d = jwt.verify(h.slice(7), process.env.JWT_SECRET, { algorithms: ['HS256'] });
+      if (d && d.id) return 'u:' + d.id;
+    } catch {
+      // token galat/expire: neeche IP se ginenge
+    }
+  }
+  return 'ip:' + req.ip;
+}
+
+// Poore /api par: login user ko 5 minute me 600 tak, bina login (login/OTP wale) IP se 1500 tak.
+const apiLimiter = (() => {
+  const keyFn = (req) => req._rlKey;
+  const authed = limiter({ windowMs: 5 * 60 * 1000, max: 600, keyFn });
+  const guest = limiter({ windowMs: 5 * 60 * 1000, max: 1500, keyFn });
+  return (req, res, next) => {
+    req._rlKey = userKey(req);
+    return (req._rlKey.startsWith('u:') ? authed : guest)(req, res, next);
+  };
+})();
 
 // Attendance lagane par: ek student 1 minute me 25 baar se zyada nahi
 const markLimiter = limiter({
