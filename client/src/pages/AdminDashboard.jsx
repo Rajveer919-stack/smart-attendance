@@ -6,6 +6,7 @@ import AdminCharts from '../components/AdminCharts';
 import AdminSecurity from '../components/AdminSecurity';
 import BulkUpload from '../components/BulkUpload';
 import ExportAll from '../components/ExportAll';
+import LeaveInbox from '../components/LeaveInbox';
 
 const inputClass =
   'w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500';
@@ -224,6 +225,7 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <Hero role="admin" name={user.name} line="Manage · Monitor · Grow" quote="Sab kuch ek jagah se sambhalo." />
             <ExportAll departments={meta.departments} />
+            <LeaveInbox title="Saari leave requests" />
             <div className="grid grid-cols-3 gap-3">
               <Stat icon="teacher" tone="violet" label="Teachers" value={teachers.length} />
               <Stat icon="book" tone="sky" label="Subjects" value={subjects.length} />

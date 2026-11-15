@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import DashboardShell, { Hero, Stat } from '../components/DashboardShell';
 import StudentSettings from '../components/StudentSettings';
 import AttendancePlanner from '../components/AttendancePlanner';
+import StreakBadges from '../components/StreakBadges';
+import LeaveStudent from '../components/LeaveStudent';
 import { getDeviceId, getPosition } from '../utils/device';
 import { markWithBio } from '../utils/bio';
 
@@ -389,6 +391,8 @@ export default function StudentDashboard() {
 
               </div>
               <div className="space-y-5 lg:col-span-2">
+                <StreakBadges />
+
                 {!loading && report.length > 0 && (
                   <section className="grid gap-3">
                     <div className="bg-white rounded-2xl shadow p-4 flex items-center gap-4">
@@ -493,6 +497,8 @@ export default function StudentDashboard() {
 
         {view === 'history' && (
           <>
+            <LeaveStudent />
+
             <section className="bg-white rounded-2xl shadow p-4 space-y-2">
               <h2 className="text-lg font-semibold text-slate-800">Haal hi ki attendance</h2>
               {history.length === 0 && <p className="text-sm text-slate-500">Abhi tak koi attendance nahi lagi.</p>}

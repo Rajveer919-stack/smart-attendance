@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import DashboardShell, { Hero, Stat } from '../components/DashboardShell';
 import ExportAll from '../components/ExportAll';
+import LeaveInbox from '../components/LeaveInbox';
 
 // Teacher ke phone ki location. Student isi ke paas hone chahiye (admin ne location check ON kiya ho to)
 function getPosition() {
@@ -110,6 +111,8 @@ export default function TeacherDashboard() {
         </Hero>
 
         <ExportAll />
+
+        <LeaveInbox />
 
         <div className="grid grid-cols-3 gap-3">
           <Stat icon="book" tone="indigo" label="Subjects" value={subjects.length} />
