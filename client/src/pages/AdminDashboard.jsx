@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import DashboardShell, { Hero, Stat } from '../components/DashboardShell';
 import AdminCharts from '../components/AdminCharts';
 import AdminSecurity from '../components/AdminSecurity';
+import BulkUpload from '../components/BulkUpload';
+import ExportAll from '../components/ExportAll';
 
 const inputClass =
   'w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500';
@@ -220,7 +222,8 @@ export default function AdminDashboard() {
 
         {tab === 'overview' && (
           <div className="space-y-4">
-         <Hero role="admin" name={user.name} line="Manage · Monitor · Grow" quote="Sab kuch ek jagah se sambhalo." />
+            <Hero role="admin" name={user.name} line="Manage · Monitor · Grow" quote="Sab kuch ek jagah se sambhalo." />
+            <ExportAll departments={meta.departments} />
             <div className="grid grid-cols-3 gap-3">
               <Stat icon="teacher" tone="violet" label="Teachers" value={teachers.length} />
               <Stat icon="book" tone="sky" label="Subjects" value={subjects.length} />
@@ -234,6 +237,8 @@ export default function AdminDashboard() {
 
         {tab === 'students' && (
           <div className="space-y-4">
+            <BulkUpload onDone={loadAll} />
+
             <div className="bg-white rounded-2xl shadow p-5 space-y-3">
               <h2 className="text-lg font-semibold text-slate-800">Class-wise students</h2>
               {classCounts.length === 0 && (

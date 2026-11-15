@@ -7,6 +7,7 @@ const {
   updateUser,
   deleteUser,
 } = require('../controllers/userController');
+const { bulkCreateStudents } = require('../controllers/bulkController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.get('/my-classes', authorize('teacher', 'admin'), getMyClasses);
 router.get('/class-students', authorize('teacher', 'admin'), getClassStudents);
 
 // Baaki sirf admin ke liye
+router.post('/bulk', authorize('admin'), bulkCreateStudents);
 router.get('/summary', authorize('admin'), getClassSummary);
 router.get('/', authorize('admin'), getUsers);
 router.put('/:id', authorize('admin'), updateUser);

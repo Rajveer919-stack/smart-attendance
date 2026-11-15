@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import DashboardShell, { Hero, Stat } from '../components/DashboardShell';
+import ExportAll from '../components/ExportAll';
 
 // Teacher ke phone ki location. Student isi ke paas hone chahiye (admin ne location check ON kiya ho to)
 function getPosition() {
@@ -97,7 +98,7 @@ export default function TeacherDashboard() {
   return (
     <DashboardShell label="Teacher Dashboard" nav={TEACHER_NAV} active="home" bellTo="/teacher/announcements">
       <div className="space-y-5">
-                <Hero
+        <Hero
           role="teacher"
           name={user.name}
           line="Teach · Guide · Inspire"
@@ -107,6 +108,8 @@ export default function TeacherDashboard() {
             Class ko announcement bhejo
           </Link>
         </Hero>
+
+        <ExportAll />
 
         <div className="grid grid-cols-3 gap-3">
           <Stat icon="book" tone="indigo" label="Subjects" value={subjects.length} />

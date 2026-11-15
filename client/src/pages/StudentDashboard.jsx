@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import DashboardShell, { Hero, Stat } from '../components/DashboardShell';
 import StudentSettings from '../components/StudentSettings';
+import AttendancePlanner from '../components/AttendancePlanner';
 import { getDeviceId, getPosition } from '../utils/device';
 import { markWithBio } from '../utils/bio';
 
@@ -49,7 +50,7 @@ function Ring({ percentage, size = 64 }) {
 const STUDENT_NAV = [
   { key: 'home', label: 'Home', icon: 'home' },
   { key: 'subjects', label: 'Subjects', icon: 'book' },
-   { key: 'scan', label: 'Scan', icon: 'scan', to: '/student/scan', center: true },
+  { key: 'scan', label: 'Scan', icon: 'scan', to: '/student/scan', center: true },
   { key: 'history', label: 'History', icon: 'clock' },
   { key: 'settings', label: 'Settings', icon: 'sliders' },
 ];
@@ -224,7 +225,7 @@ export default function StudentDashboard() {
       <div className="space-y-5">
         {view === 'home' && (
           <>
-                        <Hero role="student" name={user.name} line="Dream Big · Study Hard · Achieve More" quote="Success starts with regular attendance.">
+            <Hero role="student" name={user.name} line="Dream Big · Study Hard · Achieve More" quote="Success starts with regular attendance.">
               <div className="mk-hero-chips">
                 <span>{'Roll ' + (user.rollNo || '-')}</span>
                 <span>{user.department}</span>
@@ -425,6 +426,8 @@ export default function StudentDashboard() {
                 {'Dhyan do: ' + riskCount + ' subject me tumhari attendance 75% se kam hai. Neeche dekho kitni class aur lagani hai.'}
               </p>
             )}
+
+            <AttendancePlanner report={report} />
 
             <h2 className="text-xl font-semibold text-slate-800">Subject-wise attendance</h2>
 

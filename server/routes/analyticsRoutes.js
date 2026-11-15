@@ -6,6 +6,7 @@ const {
   getOverview,
 } = require('../controllers/analyticsController');
 const { alertLowAttendance } = require('../controllers/alertController');
+const { exportAllExcel } = require('../controllers/exportAllController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -14,6 +15,9 @@ router.use(protect);
 
 // Sirf admin: dashboard ke charts
 router.get('/overview', authorize('admin'), getOverview);
+
+// Teacher (apne subjects) ya admin (sab): ek Excel me saare subjects
+router.get('/export-all', authorize('teacher', 'admin'), exportAllExcel);
 
 // Teacher (apna subject) ya admin (sab)
 router.get('/subject/:subjectId', authorize('teacher', 'admin'), getSubjectReport);
