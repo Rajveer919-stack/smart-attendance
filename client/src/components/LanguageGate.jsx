@@ -227,7 +227,7 @@ export default function LanguageGate({ children }) {
       {children}
       <div
         data-no-translate="true"
-        className={'fixed z-50 ' + (onAuthPage ? 'top-3 right-3' : 'bottom-3 left-3')}
+        className={'fixed z-50 ' + (onAuthPage ? 'top-3 right-3' : 'bottom-20 right-3 md:bottom-3')}
       >
         <div className="flex rounded-full bg-white/95 shadow-lg ring-1 ring-slate-200 p-0.5 text-xs font-semibold">
           <button onClick={() => choose('en')} className={pill('en')}>

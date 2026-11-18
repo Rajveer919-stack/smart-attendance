@@ -255,7 +255,10 @@ const EXTRA_PATTERNS = [
   [/^Sabse naye (\d+) record dikh rahe hai, kul (\d+)\.$/, 'Showing the latest $1 records, $2 in total.']
 ];
 
+import { registerMore } from './more.js';
+
 export function registerExtra(pairs, patterns) {
+  registerMore(pairs, patterns);
   EXTRA_PAIRS.forEach((p) => pairs.push(p));
   EXTRA_PATTERNS.forEach((p) => patterns.push(p));
   // Lambe phrase pehle, taaki wo chhote phrase se pehle match ho
